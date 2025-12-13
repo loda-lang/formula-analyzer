@@ -15,8 +15,6 @@ The formula analyzer classifies formulas into different types and identifies LOD
 
 - **formula_analyzer.py** - Core analysis module with formula classification and comparison
 - **run_formula_analysis.py** - Command-line script to run the analysis
-- **formula_analysis.ipynb** - Jupyter notebook for interactive exploration
-- **FORMULA_ANALYSIS_README.md** - This file
 
 ## Formula Types
 
@@ -71,20 +69,9 @@ for formula, new_types, reason in results[:10]:
     print(f"  {formula.text}")
 ```
 
-### Jupyter Notebook
-
-Open `formula_analysis.ipynb` in Jupyter to interactively explore:
-
-1. Load and parse formula files
-2. Compare formulas and find interesting ones
-3. Visualize statistics and distributions
-4. Search by sequence name or formula pattern
-5. Inspect individual sequences in detail
-6. Export results to CSV
-
 ## Input File Formats
 
-### formulas-oeis.txt
+### data/formulas-oeis.txt
 
 OEIS formulas extracted from www.oeis.org. Format:
 ```
@@ -93,7 +80,7 @@ A000016: a(n) = 2^(n-1) - A327477(n).
   a(n) = Sum_{odd d divides n} (phi(d)*2^(n/d))/(2*n), n>0.
 ```
 
-### formulas-loda.txt
+### data/formulas-loda.txt
 
 LODA formulas generated from LODA programs. Format:
 ```
@@ -102,7 +89,7 @@ A000079: a(n) = 2^n
 A000217: a(n) = binomial(n+1,2)
 ```
 
-### names.txt
+### data/names.txt
 
 Sequence names from OEIS. Format:
 ```
@@ -115,7 +102,7 @@ A000079 Powers of 2: a(n) = 2^n.
 The tool generates:
 
 1. **Console output** - Statistics and top interesting formulas
-2. **interesting_formulas.txt** - Detailed report of all findings
+2. **results/interesting_formulas.txt** - Detailed report of all findings
 3. **CSV exports** (from notebook) - Structured data for further analysis
 
 ### Example Output
