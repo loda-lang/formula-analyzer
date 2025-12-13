@@ -155,7 +155,7 @@ if line.startswith('  ') and current_seq_id:
 ### Input Files
 - `data/formulas-oeis.txt`: Multi-line entries with 2-space indent for continuation
 - `data/formulas-loda.txt`: Single line per sequence
-- `data/names.txt`: Format `A123456 Sequence name description`
+- `data/names`: Format `A123456 Sequence name description`
 
 ### Output Files
 - `results/interesting_formulas.txt`: Human-readable report

@@ -59,7 +59,7 @@ from formula_analyzer import analyze_formulas, FormulaType
 results, comparator = analyze_formulas(
     'formulas-oeis.txt',
     'formulas-loda.txt', 
-    'names.txt',
+    'names',
     'interesting_formulas.txt'
 )
 
@@ -89,7 +89,7 @@ A000079: a(n) = 2^n
 A000217: a(n) = binomial(n+1,2)
 ```
 
-### data/names.txt
+### data/names
 
 Sequence names from OEIS. Format:
 ```
@@ -199,7 +199,7 @@ from formula_analyzer import analyze_formulas, FormulaType
 results, comparator = analyze_formulas(
     'formulas-oeis.txt',
     'formulas-loda.txt',
-    'names.txt'
+    'names'
 )
 
 # Filter for explicit formulas

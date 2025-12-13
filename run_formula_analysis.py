@@ -13,7 +13,7 @@ def main():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     oeis_file = os.path.join(base_dir, "data/formulas-oeis.txt")
     loda_file = os.path.join(base_dir, "data/formulas-loda.txt")
-    names_file = os.path.join(base_dir, "data/names.txt")
+    names_file = os.path.join(base_dir, "data/names")
     output_file = os.path.join(base_dir, "results/interesting_formulas.txt")
     
     for f in [oeis_file, loda_file, names_file]:

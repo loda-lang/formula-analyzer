@@ -578,7 +578,7 @@ def analyze_formulas(oeis_file: str, loda_file: str, names_file: str,
     Args:
         oeis_file: Path to formulas-oeis.txt
         loda_file: Path to formulas-loda.txt
-        names_file: Path to names.txt
+        names_file: Path to names
         output_file: Optional output file for report
     """
     print("Parsing OEIS formulas...")
@@ -634,7 +634,7 @@ if __name__ == "__main__":
     # Default file paths
     oeis_file = "formulas-oeis.txt"
     loda_file = "formulas-loda.txt"
-    names_file = "names.txt"
+    names_file = "names"
     output_file = "interesting_formulas.txt"
     
     # Allow command line arguments
