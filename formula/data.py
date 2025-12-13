@@ -3,8 +3,8 @@ from typing import Dict, Iterator, List, Optional, Set
 
 from formula.parser import ParsedFormula, FormulaParser
 
-# Temporary blacklists for formulas that assume incorrect offsets or are misleading/non-explicit
-BLACKLIST_OEIS: set[str] = {
+# Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
+DENYLIST_OEIS: set[str] = {
     "A103320",
     "A326991",
     "A326994",
@@ -32,7 +32,7 @@ BLACKLIST_OEIS: set[str] = {
     "A374224",
 }
 
-BLACKLIST_LODA: set[str] = {
+DENYLIST_LODA: set[str] = {
     # LODA formulas that assume offset 0 but OEIS offset is nonzero
     "A044187",
     "A044242",
@@ -72,7 +72,7 @@ def iter_loda_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormu
             parsed = _parse_loda_line(raw_line, parser)
             if not parsed:
                 continue
-            if parsed.sequence_id in BLACKLIST_LODA:
+            if parsed.sequence_id in DENYLIST_LODA:
                 continue
             yield parsed
 
@@ -85,7 +85,7 @@ def iter_oeis_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormu
             seq_match = OEIS_HEADER_RE.match(line)
             if seq_match:
                 current_id = seq_match.group(1)
-                if current_id in BLACKLIST_OEIS:
+                if current_id in DENYLIST_OEIS:
                     current_id = None
                     continue
                 remainder = seq_match.group(2)
