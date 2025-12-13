@@ -333,6 +333,9 @@ class FormulaComparator:
         self.NAME_POW_PATTERN = re.compile(r'\ba\(n\)\s*=\s*[^=]*\b\d+\^n|\ba\(n\)\s*=\s*n\^\d+')
         # Detection of titles like "Powers of 14." implying a(n) = 14^n
         self.NAME_POWERS_OF_PATTERN = re.compile(r'\bPowers of\s+\d+', re.IGNORECASE)
+        # Detect explicit polynomial formulas in names after colon (e.g., "Description: 7*n^2 + 4*n + 1.")
+        # Matches patterns like: n^2, n*(n+1), 3*n^2, etc. after a colon
+        self.NAME_POLYNOMIAL_PATTERN = re.compile(r':\s*[\d\w\s]*\*?\s*n[\^\*\(\)0-9+\-\s]*[+\-]', re.IGNORECASE)
 
     def _types_from_name(self, seq_id: str) -> Set[FormulaType]:
         """Infer formula types from the OEIS sequence name/title."""
@@ -357,6 +360,9 @@ class FormulaComparator:
         if self.NAME_POW_PATTERN.search(name) and FormulaType.EXPLICIT_CLOSED not in types and FormulaType.RECURRENCE not in types:
             types.add(FormulaType.EXPLICIT_CLOSED)
         if self.NAME_POWERS_OF_PATTERN.search(name) and FormulaType.EXPLICIT_CLOSED not in types and FormulaType.RECURRENCE not in types:
+            types.add(FormulaType.EXPLICIT_CLOSED)
+        # Detect polynomial formulas in names like "Description: 7*n^2 + 4*n + 1."
+        if self.NAME_POLYNOMIAL_PATTERN.search(name) and FormulaType.EXPLICIT_CLOSED not in types and FormulaType.RECURRENCE not in types:
             types.add(FormulaType.EXPLICIT_CLOSED)
         return types
 
@@ -473,6 +479,9 @@ class FormulaComparator:
 
         new_types = loda_types - oeis_types
         if new_types and FormulaType.UNKNOWN not in new_types:
+            # If name has explicit formula and LODA only adds floor/ceiling/modular as implementation details, not interesting
+            if name_has_explicit and new_types <= {FormulaType.FLOOR_CEILING, FormulaType.MODULAR}:
+                return None
             type_names = ', '.join(t.value for t in new_types)
             return f"LODA provides new formula types: {type_names}"
         return None

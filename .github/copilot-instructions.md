@@ -187,6 +187,13 @@ if line.startswith('  ') and current_seq_id:
 - The `NAME_BINOMIAL_PATTERN` detects: `binomial\s+coefficient`, `binomial\(`, or `\bC\(\d*n` in titles
 - Check both formula entries AND sequence names when determining binomial type coverage
 
+### Explicit Polynomial Formulas in Names
+- Many sequence names contain explicit formulas: "Description: 7*n^2 + 4*n + 1." (A005892)
+- The `NAME_POLYNOMIAL_PATTERN` detects polynomials after colons: `:\s*...*n...+/-`
+- When a name provides an explicit polynomial, LODA variants using floor/ceiling/modular are not novel
+- Examples: `7*n^2+4*n+1` vs `floor(((7*n+2)^2)/7)+1` are algebraically equivalent
+- Filter out cases where LODA only adds implementation details (floor_ceiling, modular) to name-provided formulas
+
 ## Dependencies and Environment
 
 - Python 3.7+ (uses dataclasses, type hints)
