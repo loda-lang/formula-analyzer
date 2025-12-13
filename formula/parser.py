@@ -2,7 +2,8 @@ import re
 from dataclasses import dataclass
 from typing import Optional, List, Tuple, Union
 
-TOKEN_REGEX = re.compile(r"\s*(?:([a-zA-Z]+)|([0-9]+)|([nN])|([+\-])|(\*)|(/)|(\^)|(\()|(\)))")
+# Add comma to tokenizer to support multi-arg functions
+TOKEN_REGEX = re.compile(r"\s*(?:([a-zA-Z]+)|([0-9]+)|([nN])|([+\-])|(\*)|(/)|(\^)|(\()|(\))|(,))")
 
 
 @dataclass
@@ -34,7 +35,8 @@ class FormulaParser:
         candidate = expr.strip().rstrip(".;")
         if not candidate:
             return None
-        if not re.fullmatch(r"[0-9nN\+\-\*/\^\(\)\sa-zA-Z]+", candidate):
+        # Allow commas for multi-arg functions
+        if not re.fullmatch(r"[0-9nN\+\-\*/\^\(\),\sa-zA-Z]+", candidate):
             return None
         return candidate
 
@@ -61,9 +63,9 @@ class UnaryNode:
         self.operand = operand
 
 class FuncNode:
-    def __init__(self, name: str, arg: object):
+    def __init__(self, name: str, args: List[object]):
         self.name = name
-        self.arg = arg
+        self.args = args
 
 
 Token = Tuple[str, Union[int, str]]
@@ -81,7 +83,7 @@ def _tokenize(expr: str) -> List[Token]:
             func_name = m.group(1).lower()
             if func_name == "n":
                 tokens.append(("VAR", "n"))
-            elif func_name in ("floor", "ceil"):
+            elif func_name in ("floor", "ceil", "binomial", "sqrtint", "gcd", "sumdigits"):
                 tokens.append(("FUNC", func_name))
             else:
                 raise ValueError(f"Unsupported identifier: {func_name}")
@@ -101,6 +103,8 @@ def _tokenize(expr: str) -> List[Token]:
             tokens.append(("LP", "("))
         elif m.group(9):
             tokens.append(("RP", ")"))
+        elif m.group(10):
+            tokens.append(("COMMA", ","))
         else:
             pass
     tokens.append(("EOF", ""))
@@ -179,12 +183,17 @@ class Parser:
         if kind == "FUNC":
             func_name = self.eat("FUNC")[1]
             # Only allow supported functions
-            if func_name not in ("floor", "ceil"):
+            if func_name not in ("floor", "ceil", "binomial", "sqrtint", "gcd", "sumdigits"):
                 raise ValueError(f"Unsupported function: {func_name}")
             self.eat("LP")
-            arg = self.expr()
+            # Parse one or more arguments separated by commas
+            args: List[object] = []
+            args.append(self.expr())
+            while self.peek()[0] == "COMMA":
+                self.eat("COMMA")
+                args.append(self.expr())
             self.eat("RP")
-            return FuncNode(func_name, arg)
+            return FuncNode(func_name, args)
         if kind == "LP":
             self.eat("LP")
             node = self.expr()
@@ -209,11 +218,65 @@ def _eval_node(node: object, n: int) -> int:
         return val if node.op == "+" else -val
     if isinstance(node, FuncNode):
         import math
-        arg_val = _eval_node(node.arg, n)
+        # Evaluate all arguments first
+        arg_vals = [_eval_node(arg, n) for arg in node.args]
         if node.name == "floor":
-            return math.floor(arg_val)
+            if len(arg_vals) != 1:
+                raise ValueError("floor() expects 1 argument")
+            return math.floor(arg_vals[0])
         if node.name == "ceil":
-            return math.ceil(arg_val)
+            if len(arg_vals) != 1:
+                raise ValueError("ceil() expects 1 argument")
+            return math.ceil(arg_vals[0])
+        if node.name == "binomial":
+            if len(arg_vals) != 2:
+                raise ValueError("binomial() expects 2 arguments")
+            def _to_int(value: Union[int, float]) -> int:
+                if isinstance(value, float):
+                    if not value.is_integer():
+                        raise ValueError("binomial() expects integer arguments")
+                    return int(value)
+                return int(value)
+
+            n_arg = _to_int(arg_vals[0])
+            k_arg = _to_int(arg_vals[1])
+            if k_arg < 0:
+                return 0
+            if k_arg == 0:
+                return 1
+            if n_arg >= 0:
+                try:
+                    return math.comb(n_arg, k_arg)
+                except ValueError:
+                    return 0
+            # Generalized binomial for negative n: C(-m, k) = (-1)^k * C(m + k - 1, k)
+            try:
+                return (-1) ** k_arg * math.comb(k_arg - n_arg - 1, k_arg)
+            except ValueError:
+                return 0
+        if node.name == "sqrtint":
+            if len(arg_vals) != 1:
+                raise ValueError("sqrtint() expects 1 argument")
+            return math.isqrt(int(arg_vals[0]))
+        if node.name == "gcd":
+            if len(arg_vals) != 2:
+                raise ValueError("gcd() expects 2 arguments")
+            return math.gcd(int(arg_vals[0]), int(arg_vals[1]))
+        if node.name == "sumdigits":
+            if len(arg_vals) not in (1, 2):
+                raise ValueError("sumdigits() expects 1 or 2 arguments")
+            x = int(arg_vals[0])
+            base = int(arg_vals[1]) if len(arg_vals) == 2 else 10
+            if base < 2:
+                raise ValueError("sumdigits() base must be >= 2")
+            s = 0
+            y = abs(x)
+            if y == 0:
+                return 0
+            while y:
+                s += y % base
+                y //= base
+            return s
         raise ValueError(f"Unknown function: {node.name}")
     if isinstance(node, BinNode):
         left = _eval_node(node.left, n)

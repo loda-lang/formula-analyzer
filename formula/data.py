@@ -74,6 +74,33 @@ DENYLIST_LODA: set[str] = {
     "A158397",
     "A158421",
     "A254029",
+    # Additional offset/semantic mismatches (binomial/generalized operations)
+    "A000245",
+    "A037964",
+    "A050168",
+    "A065738",
+    "A089418",
+    "A105812",
+    "A115143",
+    "A115145",
+    "A115146",
+    "A115148",
+    "A120054",
+    "A127769",
+    "A167422",
+    "A171905",
+    "A262564",
+    "A265610",
+    "A267182",
+    "A271823",
+    "A276234",
+    "A291662",
+    "A353259",
+    "A363417",
+    "A370487",
+    "A378569",
+    "A384288",
+    "A386879",
 }
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)
@@ -121,8 +148,22 @@ def _parse_loda_line(line: str, parser: FormulaParser) -> Optional[ParsedFormula
     if not match:
         return None
     seq_id, expr = match.group(1), match.group(2)
-    if "," in expr:
-        expr = expr.split(",", 1)[0].strip()
+
+    # Strip trailing metadata (initial conditions, extra recurrences) by cutting at
+    # the first comma that appears at parentheses depth zero, but keep commas
+    # inside function calls like binomial(..., ...).
+    depth = 0
+    cut_idx = None
+    for idx, ch in enumerate(expr):
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth = max(depth - 1, 0)
+        elif ch == "," and depth == 0:
+            cut_idx = idx
+            break
+    if cut_idx is not None:
+        expr = expr[:cut_idx].strip()
     return parser.parse_expression(seq_id, "loda", expr)
 
 
