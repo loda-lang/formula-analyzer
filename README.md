@@ -88,9 +88,9 @@ Open `formula_analysis.ipynb` in Jupyter to interactively explore:
 
 OEIS formulas extracted from www.oeis.org. Format:
 ```
-A000045: a(n) = a(n-1) + a(n-2) with a(0) = 0, a(1) = 1.
-A000045: G.f.: x/(1-x-x^2).
-A000045: a(n) = round(phi^n / sqrt(5)).
+A000016: a(n) = 2^(n-1) - A327477(n).
+  a(n) = A063776(n)/2.
+  a(n) = Sum_{odd d divides n} (phi(d)*2^(n/d))/(2*n), n>0.
 ```
 
 ### formulas-loda.txt
