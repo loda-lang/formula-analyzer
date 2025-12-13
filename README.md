@@ -97,6 +97,14 @@ A000045 Fibonacci numbers: F(n) = F(n-1) + F(n-2) with F(0) = 0 and F(1) = 1.
 A000079 Powers of 2: a(n) = 2^n.
 ```
 
+### data/stripped
+
+OEIS sequence terms ("stripped" export from oeis.org). Notes on format:
+- Starts with comment lines beginning with `#` (license, timestamp).
+- Each sequence is on one line: `Axxxxxx ,t0,t1,t2,...` (comma-separated terms; large lines may wrap in editors).
+- File has no extension (mirrors the OEIS stripped export name).
+- Not yet used by the analyzer; reserved for future term-based validation.
+
 ## Output
 
 The tool generates:

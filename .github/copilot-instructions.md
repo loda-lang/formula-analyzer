@@ -156,6 +156,7 @@ if line.startswith('  ') and current_seq_id:
 - `data/formulas-oeis.txt`: Multi-line entries with 2-space indent for continuation
 - `data/formulas-loda.txt`: Single line per sequence
 - `data/names`: Format `A123456 Sequence name description`
+- `data/stripped`: OEIS sequence terms ("stripped" export). Begins with comment lines `# ...`; each sequence line is `Axxxxxx ,t0,t1,t2,...` (comma-separated terms; long lines may wrap). Not yet used; reserved for future term-based validation.
 
 ### Output Files
 - `results/interesting_formulas.txt`: Human-readable report
