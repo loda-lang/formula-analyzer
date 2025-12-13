@@ -3,7 +3,7 @@
 Script to run formula analysis and generate detailed reports.
 """
 
-from formula_analyzer import analyze_formulas, FormulaType
+from formula.analyzer import analyze_formulas, FormulaType
 import os
 
 

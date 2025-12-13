@@ -1,8 +1,8 @@
 import unittest
 from pathlib import Path
 
-from formula_parser import FormulaParser
-from data_parsers import (
+from formula.parser import FormulaParser
+from formula.data import (
     iter_loda_formulas,
     iter_oeis_formulas,
     load_offsets,

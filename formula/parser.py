@@ -113,7 +113,7 @@ class Parser:
             raise ValueError("Unexpected trailing tokens")
         return node
 
-    # expr := term (('+'|'-') term)*
+    # expr := term (("+"|"-") term)*
     def expr(self) -> object:
         node = self.term()
         while self.peek()[0] in ("ADD", "SUB"):

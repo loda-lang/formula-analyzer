@@ -1,7 +1,7 @@
 import re
 from typing import Dict, Iterator, List, Optional, Set
 
-from formula_parser import ParsedFormula, FormulaParser
+from formula.parser import ParsedFormula, FormulaParser
 
 # Temporary blacklist for OEIS formulas that are misleading/non-explicit in context
 BLACKLIST_OEIS: set[str] = {"A103320"}
@@ -36,7 +36,6 @@ def iter_oeis_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormu
                     yield parsed
                 continue
             if current_id and line.startswith("  "):
-                # Only consider continuation lines that start with a(n) =
                 cont = line.strip()
                 if cont.lower().startswith("a(n) ="):
                     parsed = _parse_oeis_formula_text(current_id, cont, parser)
@@ -55,12 +54,10 @@ def _parse_loda_line(line: str, parser: FormulaParser) -> Optional[ParsedFormula
 
 
 def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> Optional[ParsedFormula]:
-    # Only allow lines that are exactly polynomial-like explicit formulas
     match = OEIS_FORMULA_RE.match(text)
     if not match:
         return None
     expr = match.group(1)
-    # Filter out lines with disallowed characters (e.g., comments, names)
     if not re.fullmatch(r"[0-9nN\+\-\*\^\(\)\s]+", expr):
         return None
     return parser.parse_expression(seq_id, "oeis", expr)
