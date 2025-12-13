@@ -10,20 +10,31 @@ DENYLIST_OEIS: set[str] = {
     "A326994",
     # Offset-misaligned or unreliable OEIS formulas
     "A061026",
+    "A080770",
     "A092181",
+    "A106229",
     "A106230",
     "A115077",
     "A133043",
     "A166931",
+    "A178372",
     "A190414",
     "A194769",
     "A213826",
     "A221533",
     "A238812",
+    "A247405",
+    "A247928",
     "A270257",
+    "A270258",
+    "A270259",
     "A270510",
+    "A270511",
+    "A270512",
+    "A277636",
     "A281907",
     "A297895",
+    "A299965",
     "A300576",
     "A303400",
     "A352758",
@@ -121,8 +132,8 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
         return None
     if "n" not in expr.lower():
         return None
-    # Be conservative: drop higher-degree forms and trivial linear n-only cases to reduce misparsed OEIS formulas.
-    if re.search(r"\^[3-9]\d*", expr):
+    # Be conservative: drop very high degree forms (>=10) and trivial linear n-only cases to reduce misparsed OEIS formulas.
+    if re.search(r"\^([1-9]\d+)", expr):
         return None
     if not any(op in expr for op in ["+", "*", "^"]):
         return None
