@@ -194,6 +194,11 @@ if line.startswith('  ') and current_seq_id:
 - Examples: `7*n^2+4*n+1` vs `floor(((7*n+2)^2)/7)+1` are algebraically equivalent
 - Filter out cases where LODA only adds implementation details (floor_ceiling, modular) to name-provided formulas
 
+### Linear Multiples in Names
+- Titles like "Multiples of 7" or "Multiples of 13" already imply the explicit formula `k*n`
+- The `NAME_MULTIPLES_PATTERN` detects phrases `multiples of <number>`
+- LODA restating `k*n` is not novel; treat as explicit closed form supplied by the name
+
 ## Dependencies and Environment
 
 - Python 3.7+ (uses dataclasses, type hints)

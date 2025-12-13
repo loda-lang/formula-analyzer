@@ -336,6 +336,8 @@ class FormulaComparator:
         # Detect explicit polynomial formulas in names after colon (e.g., "Description: 7*n^2 + 4*n + 1.")
         # Matches patterns like: n^2, n*(n+1), 3*n^2, etc. after a colon
         self.NAME_POLYNOMIAL_PATTERN = re.compile(r':\s*[\d\w\s]*\*?\s*n[\^\*\(\)0-9+\-\s]*[+\-]', re.IGNORECASE)
+        # Detect simple linear multiples in titles like "Multiples of 7"
+        self.NAME_MULTIPLES_PATTERN = re.compile(r'\bmultiples of\s+\d+\b', re.IGNORECASE)
 
     def _types_from_name(self, seq_id: str) -> Set[FormulaType]:
         """Infer formula types from the OEIS sequence name/title."""
@@ -363,6 +365,9 @@ class FormulaComparator:
             types.add(FormulaType.EXPLICIT_CLOSED)
         # Detect polynomial formulas in names like "Description: 7*n^2 + 4*n + 1."
         if self.NAME_POLYNOMIAL_PATTERN.search(name) and FormulaType.EXPLICIT_CLOSED not in types and FormulaType.RECURRENCE not in types:
+            types.add(FormulaType.EXPLICIT_CLOSED)
+        # Detect titles giving linear multiples like "Multiples of 7"
+        if self.NAME_MULTIPLES_PATTERN.search(name):
             types.add(FormulaType.EXPLICIT_CLOSED)
         return types
 
