@@ -338,6 +338,8 @@ class FormulaComparator:
         self.NAME_POLYNOMIAL_PATTERN = re.compile(r':\s*[\d\w\s]*\*?\s*n[\^\*\(\)0-9+\-\s]*[+\-]', re.IGNORECASE)
         # Detect simple linear multiples in titles like "Multiples of 7"
         self.NAME_MULTIPLES_PATTERN = re.compile(r'\bmultiples of\s+\d+\b', re.IGNORECASE)
+        # Detect floor/ceiling forms in titles like "Floor( n(n-1)/7 )"
+        self.NAME_FLOOR_CEILING_PATTERN = re.compile(r'\bfloor\(|\bceiling\(', re.IGNORECASE)
 
     def _types_from_name(self, seq_id: str) -> Set[FormulaType]:
         """Infer formula types from the OEIS sequence name/title."""
@@ -368,6 +370,10 @@ class FormulaComparator:
             types.add(FormulaType.EXPLICIT_CLOSED)
         # Detect titles giving linear multiples like "Multiples of 7"
         if self.NAME_MULTIPLES_PATTERN.search(name):
+            types.add(FormulaType.EXPLICIT_CLOSED)
+        # Detect floor/ceiling explicit formulas in titles
+        if self.NAME_FLOOR_CEILING_PATTERN.search(name):
+            types.add(FormulaType.FLOOR_CEILING)
             types.add(FormulaType.EXPLICIT_CLOSED)
         return types
 

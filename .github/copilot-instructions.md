@@ -199,6 +199,11 @@ if line.startswith('  ') and current_seq_id:
 - The `NAME_MULTIPLES_PATTERN` detects phrases `multiples of <number>`
 - LODA restating `k*n` is not novel; treat as explicit closed form supplied by the name
 
+### Floor/Ceiling Formulas in Names
+- Titles like "Floor(n(n-1)/7)" already give an explicit floor/ceiling closed form
+- The `NAME_FLOOR_CEILING_PATTERN` detects `floor(` or `ceiling(` in titles
+- When present, infer both `floor_ceiling` and `explicit_closed`; LODA variants are not novel unless adding a truly different type
+
 ## Dependencies and Environment
 
 - Python 3.7+ (uses dataclasses, type hints)
