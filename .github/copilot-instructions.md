@@ -157,6 +157,7 @@ if line.startswith('  ') and current_seq_id:
 - `data/formulas-loda.txt`: Single line per sequence
 - `data/names`: Format `A123456 Sequence name description`
 - `data/stripped`: OEIS sequence terms ("stripped" export). Begins with comment lines `# ...`; each sequence line is `Axxxxxx ,t0,t1,t2,...` (comma-separated terms; long lines may wrap). Not yet used; reserved for future term-based validation.
+- `data/offsets`: OEIS offsets table. One line per sequence: `Axxxxxx: n0,k` where `n0` is the primary offset (index of first listed term) and `k` is the secondary offset (position of the first term with |a(n)| > 1). Secondary may be omitted; negative or large offsets are possible. Use `n0` for index normalization; `k` is mainly informational/sorting.
 
 ### Output Files
 - `results/interesting_formulas.txt`: Human-readable report
@@ -204,6 +205,13 @@ if line.startswith('  ') and current_seq_id:
 - Titles like "Floor(n(n-1)/7)" already give an explicit floor/ceiling closed form
 - The `NAME_FLOOR_CEILING_PATTERN` detects `floor(` or `ceiling(` in titles
 - When present, infer both `floor_ceiling` and `explicit_closed`; LODA variants are not novel unless adding a truly different type
+
+### Offsets (OEIS)
+- Primary offset (first number) gives the index of the first listed term; use it to align OEIS terms with LODA's `n >= 0` convention and to normalize formulas like `a(n+1)` vs `a(n)`.
+- Secondary offset (second number) is auto-assigned; it is 1-indexed and marks the first term with |a(n)| > 1. It may be omitted; keep it as optional metadata, not as an index shift.
+- Common values: 0 for functions on nonnegative integers, 1 for “numbers such that …” lists. Negative or large offsets exist (e.g., constants, huge-start sequences). For arrays/triangles, offset is the first row index.
+- Parsing: split `Axxxxxx: n0,k`; `k` may be missing; allow negatives and large integers; skip malformed lines.
+- Usage in comparator/parity checks: adjust indexing with `n0`; avoid treating novelty that is purely an offset shift as interesting; do not penalize based on `k` aside from lexicographic/sorting needs.
 
 ## Dependencies and Environment
 

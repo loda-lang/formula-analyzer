@@ -105,6 +105,25 @@ OEIS sequence terms ("stripped" export from oeis.org). Notes on format:
 - File has no extension (mirrors the OEIS stripped export name).
 - Not yet used by the analyzer; reserved for future term-based validation.
 
+### data/offsets
+
+OEIS offsets table, used to align indices and interpret formula conventions.
+
+- Format: One entry per line: `Axxxxxx: n0,k`
+- `n0`: Index of the first term for the sequence in OEIS (often 0 or 1; may be negative).
+- `k`: Position marker used by OEIS to indicate where `a(1)` appears in the listed terms; values can vary by sequence.
+- Examples: `A000004: 0,1`, `A000012: 0,1`, `A000045: 0,4`, `A000297: -1,2`.
+- Parsing rules:
+    - Read as UTF-8; skip empty lines.
+    - Split on `:` to separate the A-number from the payload.
+    - Split payload on `,` into two integers `(n0, k)`; handle negatives.
+    - Use `try/except` to skip malformed entries gracefully.
+- Intended usage:
+    - Index normalization: Map OEIS term positions to canonical `n` when comparing with LODA formulas.
+    - Recurrence/g.f. alignment: Disambiguate conventions when `a(1)` is not the first listed term.
+    - Interest filtering: Detect cases where novelty is only due to offset shifts (e.g., `a(n+1)` vs `a(n)`).
+- More information at https://oeis.org/wiki/Offsets
+
 ## Output
 
 The tool generates:
