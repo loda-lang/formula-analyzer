@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from typing import Optional, List, Tuple, Union
 
-TOKEN_REGEX = re.compile(r"\s*(?:([0-9]+)|([nN])|([+\-])|(\*)|(\^)|(\()|(\)))")
+TOKEN_REGEX = re.compile(r"\s*(?:([0-9]+)|([nN])|([+\-])|(\*)|(/)|(\^)|(\()|(\)))")
 
 
 @dataclass
@@ -34,7 +34,7 @@ class FormulaParser:
         candidate = expr.strip().rstrip(".;")
         if not candidate:
             return None
-        if not re.fullmatch(r"[0-9nN\+\-\*\^\(\)\s]+", candidate):
+        if not re.fullmatch(r"[0-9nN\+\-\*/\^\(\)\s]+", candidate):
             return None
         return candidate
 
@@ -81,10 +81,12 @@ def _tokenize(expr: str) -> List[Token]:
         elif m.group(4):
             tokens.append(("MUL", "*"))
         elif m.group(5):
-            tokens.append(("POW", "^"))
+            tokens.append(("DIV", "/"))
         elif m.group(6):
-            tokens.append(("LP", "("))
+            tokens.append(("POW", "^"))
         elif m.group(7):
+            tokens.append(("LP", "("))
+        elif m.group(8):
             tokens.append(("RP", ")"))
         else:
             pass
@@ -122,13 +124,14 @@ class Parser:
             node = BinNode(op[1], node, rhs)
         return node
 
-    # term := factor ( '*' factor )*
+    # term := factor ( ('*'|'/') factor )*
     def term(self) -> object:
         node = self.factor()
-        while self.peek()[0] == "MUL":
-            self.eat("MUL")
+        while self.peek()[0] in ("MUL", "DIV"):
+            op_kind = self.peek()[0]
+            self.eat(op_kind)
             rhs = self.factor()
-            node = BinNode("*", node, rhs)
+            node = BinNode("/" if op_kind == "DIV" else "*", node, rhs)
         return node
 
     # factor := signed_power
@@ -191,6 +194,10 @@ def _eval_node(node: object, n: int) -> int:
             return left - right
         if node.op == "*":
             return left * right
+        if node.op == "/":
+            if right == 0:
+                raise ValueError("Division by zero")
+            return left // right
         if node.op == "^":
             return int(pow(left, right))
     raise ValueError("Invalid node")

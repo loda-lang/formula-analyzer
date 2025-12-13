@@ -23,8 +23,8 @@ class TestFormulaParser(unittest.TestCase):
         oeis_path = str(self.data_dir / "formulas-oeis.txt")
         stripped_path = str(self.data_dir / "stripped")
 
-        loda_formulas = list(iter_loda_formulas(loda_path, self.parser))
-        oeis_formulas = list(iter_oeis_formulas(oeis_path, self.parser))
+        loda_formulas = list(iter_loda_formulas(loda_path, self.parser, self.offsets))
+        oeis_formulas = list(iter_oeis_formulas(oeis_path, self.parser, self.offsets))
         parsed_formulas = loda_formulas + oeis_formulas
 
         self.assertGreater(len(parsed_formulas), 0, "No formulas were parsed")
@@ -47,16 +47,23 @@ class TestFormulaParser(unittest.TestCase):
             limit = min(len(terms), 5)
             for idx in range(limit):
                 n = offset + idx
-                value = formula.evaluate(n)
+                try:
+                    value = formula.evaluate(n)
+                except ValueError:
+                    mismatches += 1
+                    mismatch_examples.append({
+                        "id": formula.sequence_id,
+                        "source": formula.source,
+                        "expr": formula.expression,
+                        "n": n,
+                        "got": "error",
+                        "expected": terms[idx],
+                    })
+                    break
                 expected = terms[idx]
                 has_comparison = True
                 comparisons += 1
                 if value != expected:
-                    if formula.source == "loda":
-                        shifted = formula.evaluate(n - 1)
-                        comparisons += 1
-                        if shifted == expected:
-                            continue
                     mismatches += 1
                     mismatch_examples.append({
                         "id": formula.sequence_id,

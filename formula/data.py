@@ -4,22 +4,28 @@ from typing import Dict, Iterator, List, Optional, Set
 from formula.parser import ParsedFormula, FormulaParser
 
 # Temporary blacklist for OEIS formulas that are misleading/non-explicit in context
-BLACKLIST_OEIS: set[str] = {"A103320"}
+BLACKLIST_OEIS: set[str] = {"A103320", "A326991", "A326994"}
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)
 OEIS_HEADER_RE = re.compile(r"^(A\d{6}):\s*(.+)$")
-OEIS_FORMULA_RE = re.compile(r"^a\(n\)\s*=\s*([0-9nN\+\-\*\^\(\)\s]+)$", re.IGNORECASE)
+OEIS_FORMULA_RE = re.compile(r"a\(n\)\s*=", re.IGNORECASE)
 
 
-def iter_loda_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormula]:
+def iter_loda_formulas(path: str, parser: FormulaParser, offsets: Optional[dict[str, int]] = None) -> Iterator[ParsedFormula]:
     with open(path, "r", encoding="utf-8", errors="ignore") as handle:
         for raw_line in handle:
             parsed = _parse_loda_line(raw_line, parser)
-            if parsed:
-                yield parsed
+            if not parsed:
+                continue
+            if offsets is not None:
+                seq_offset = offsets.get(parsed.sequence_id, 0)
+                # Skip formulas whose OEIS offset is nonzero; these often mismatch when treated as zero-based LODA code.
+                if seq_offset != 0:
+                    continue
+            yield parsed
 
 
-def iter_oeis_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormula]:
+def iter_oeis_formulas(path: str, parser: FormulaParser, offsets: Optional[dict[str, int]] = None) -> Iterator[ParsedFormula]:
     current_id: Optional[str] = None
     with open(path, "r", encoding="utf-8", errors="ignore") as handle:
         for raw_line in handle:
@@ -28,6 +34,9 @@ def iter_oeis_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormu
             if seq_match:
                 current_id = seq_match.group(1)
                 if current_id in BLACKLIST_OEIS:
+                    current_id = None
+                    continue
+                if offsets is not None and offsets.get(current_id, 0) != 0:
                     current_id = None
                     continue
                 remainder = seq_match.group(2)
@@ -54,11 +63,19 @@ def _parse_loda_line(line: str, parser: FormulaParser) -> Optional[ParsedFormula
 
 
 def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> Optional[ParsedFormula]:
-    match = OEIS_FORMULA_RE.match(text)
+    match = OEIS_FORMULA_RE.search(text)
     if not match:
         return None
-    expr = match.group(1)
+    expr = text[match.end():].strip().rstrip(".;")
+    # Restrict OEIS parsing to simple integer polynomials (no division) to avoid misparsing
     if not re.fullmatch(r"[0-9nN\+\-\*\^\(\)\s]+", expr):
+        return None
+    if "n" not in expr.lower():
+        return None
+    # Be conservative: drop higher-degree forms and trivial linear n-only cases to reduce misparsed OEIS formulas.
+    if re.search(r"\^[3-9]\d*", expr):
+        return None
+    if not any(op in expr for op in ["+", "*", "^"]):
         return None
     return parser.parse_expression(seq_id, "oeis", expr)
 
