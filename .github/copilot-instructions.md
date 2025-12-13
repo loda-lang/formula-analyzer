@@ -179,6 +179,14 @@ if line.startswith('  ') and current_seq_id:
 - Recurrence: Requires computing a(0), a(1), ..., a(n-1) first
 - Finding explicit form for recurrence is highly valuable
 
+### Binomial Formulas and Sequence Names
+- OEIS sequence names often describe the formula itself (e.g., "Binomial coefficient C(3n,n-5)")
+- When a sequence name contains "Binomial coefficient" or pattern like "C(n,k)", the OEIS already knows it's a binomial formula
+- LODA restating the exact binomial formula from the name is NOT novel (e.g., `a(n) = binomial(3*n,n-5)` for A004323)
+- Only report LODA binomial formulas as interesting if they provide a NEW perspective not evident from the name
+- The `NAME_BINOMIAL_PATTERN` detects: `binomial\s+coefficient`, `binomial\(`, or `\bC\(\d*n` in titles
+- Check both formula entries AND sequence names when determining binomial type coverage
+
 ## Dependencies and Environment
 
 - Python 3.7+ (uses dataclasses, type hints)
@@ -211,3 +219,5 @@ if line.startswith('  ') and current_seq_id:
 - ❌ Missing rational g.f. presence (downgrades novelty)
 - ❌ Forgetting to check `FormulaType.UNKNOWN` in comparisons
 - ❌ Using absolute classification (formulas can have multiple types)
+- ❌ Claiming LODA provides a binomial formula when the OEIS sequence name already states it's a binomial coefficient
+- ❌ Ignoring sequence names when determining formula type coverage (names can imply types without explicit formula entries)

@@ -327,7 +327,8 @@ class FormulaComparator:
         self.NAME_EXPLICIT_PATTERN = re.compile(r'\ba\(n\)\s*=')
         self.NAME_RECURRENCE_PATTERN = re.compile(r'\ba\(n[-+]\d+\)')
         self.NAME_SEQUENCE_REF_PATTERN = re.compile(r'A\d{6}')
-        self.NAME_BINOMIAL_PATTERN = re.compile(r'binomial\(')
+        # Detect binomial coefficients in titles: "Binomial coefficient C(n,k)" or "binomial("
+        self.NAME_BINOMIAL_PATTERN = re.compile(r'binomial\s+coefficient|binomial\(|\bC\(\d*n', re.IGNORECASE)
         # Rough detection of simple power formulas (e.g., a(n) = 2^n, a(n) = n^5)
         self.NAME_POW_PATTERN = re.compile(r'\ba\(n\)\s*=\s*[^=]*\b\d+\^n|\ba\(n\)\s*=\s*n\^\d+')
         # Detection of titles like "Powers of 14." implying a(n) = 14^n
@@ -351,6 +352,8 @@ class FormulaComparator:
             types.add(FormulaType.SEQUENCE_REFERENCE)
         if self.NAME_BINOMIAL_PATTERN.search(name):
             types.add(FormulaType.BINOMIAL)
+            # Binomial formulas are explicit closed forms
+            types.add(FormulaType.EXPLICIT_CLOSED)
         if self.NAME_POW_PATTERN.search(name) and FormulaType.EXPLICIT_CLOSED not in types and FormulaType.RECURRENCE not in types:
             types.add(FormulaType.EXPLICIT_CLOSED)
         if self.NAME_POWERS_OF_PATTERN.search(name) and FormulaType.EXPLICIT_CLOSED not in types and FormulaType.RECURRENCE not in types:
@@ -367,13 +370,13 @@ class FormulaComparator:
             if not oeis_formulas:
                 # Use name types if present
                 if name_types:
-                    reason = (
-                        "Name provides formula; LODA mirrors type"
-                        if loda_formula.types & name_types else
-                        "LODA extends name-derived types"
-                    )
                     new_types = loda_formula.types - name_types
-                    results.append((loda_formula, new_types, reason))
+                    # If LODA is just restating what the name says (esp. binomial), skip it
+                    if loda_formula.types <= name_types:
+                        # LODA provides no new information beyond the name
+                        continue
+                    # LODA extends name-derived types
+                    results.append((loda_formula, new_types, "LODA extends name-derived types"))
                 else:
                     results.append((loda_formula, loda_formula.types, "No formulas in OEIS for this sequence"))
                 continue
@@ -448,9 +451,15 @@ class FormulaComparator:
             not oeis_has_explicit and FormulaType.RECURRENCE in oeis_types):
             if name_has_explicit:
                 return None
+            # If the name indicates it's a binomial coefficient and LODA just restates it, not interesting
+            if FormulaType.BINOMIAL in name_types and FormulaType.BINOMIAL in loda_types:
+                return None
             return "LODA provides explicit formula where OEIS only has recurrence"
 
         if FormulaType.BINOMIAL in loda_types and FormulaType.BINOMIAL not in oeis_types:
+            # If the name already says it's a binomial coefficient, don't claim novelty
+            if FormulaType.BINOMIAL in name_types:
+                return None
             return "LODA provides binomial formula not in OEIS"
 
         if (explicit_present and
