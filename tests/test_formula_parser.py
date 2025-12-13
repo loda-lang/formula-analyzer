@@ -32,7 +32,10 @@ class TestFormulaParser(unittest.TestCase):
         target_ids = {formula.sequence_id for formula in parsed_formulas}
         stripped_terms = load_stripped_terms(stripped_path, target_ids, max_terms=6)
 
-        checked = 0
+        checked_sequences = 0
+        checked_loda = 0
+        checked_oeis = 0
+        comparisons = 0
         mismatches = 0
         mismatch_examples = []
         for formula in parsed_formulas:
@@ -40,16 +43,19 @@ class TestFormulaParser(unittest.TestCase):
             terms = stripped_terms.get(formula.sequence_id)
             if not terms:
                 continue
+            has_comparison = False
             limit = min(len(terms), 5)
             for idx in range(limit):
                 n = offset + idx
                 value = formula.evaluate(n)
                 expected = terms[idx]
+                has_comparison = True
+                comparisons += 1
                 if value != expected:
                     if formula.source == "loda":
                         shifted = formula.evaluate(n - 1)
+                        comparisons += 1
                         if shifted == expected:
-                            checked += 1
                             continue
                     mismatches += 1
                     mismatch_examples.append({
@@ -61,19 +67,28 @@ class TestFormulaParser(unittest.TestCase):
                         "expected": expected,
                     })
                     break
-                checked += 1
+            if has_comparison:
+                checked_sequences += 1
+                if formula.source == "loda":
+                    checked_loda += 1
+                else:
+                    checked_oeis += 1
 
         total_parsed = len(parsed_formulas)
         total_with_terms = sum(1 for f in parsed_formulas if f.sequence_id in stripped_terms)
+        parsed_loda = len(loda_formulas)
+        parsed_oeis = len(oeis_formulas)
         print(f"Parsed formulas: {total_parsed}; with OEIS terms: {total_with_terms}")
-        print(f"Comparisons: {checked}; mismatches: {mismatches}")
+        print(f"Parsed LODA: {parsed_loda}; Parsed OEIS: {parsed_oeis}")
+        print(f"Checked sequences: {checked_sequences}; LODA: {checked_loda}; OEIS: {checked_oeis}")
+        print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
         if mismatch_examples:
             print("Sample mismatches (up to 5):")
             for ex in mismatch_examples[:5]:
                 print(f"  {ex['id']} [{ex['source']}] n={ex['n']} expr={ex['expr']} -> got {ex['got']}, expected {ex['expected']}")
 
-        self.assertGreater(checked, 0, "Parsed formulas did not produce any comparable terms")
-        self.assertLess(mismatches, checked, "Too many mismatches for simple parser prototype")
+        self.assertGreater(comparisons, 0, "Parsed formulas did not produce any comparable terms")
+        self.assertLess(mismatches, comparisons, "Too many mismatches for simple parser prototype")
 
 
 if __name__ == "__main__":
