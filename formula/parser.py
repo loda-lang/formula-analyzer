@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from typing import Optional, List, Tuple, Union
 
-TOKEN_REGEX = re.compile(r"\s*(?:([0-9]+)|([nN])|([+\-])|(\*)|(/)|(\^)|(\()|(\)))")
+TOKEN_REGEX = re.compile(r"\s*(?:([a-zA-Z]+)|([0-9]+)|([nN])|([+\-])|(\*)|(/)|(\^)|(\()|(\)))")
 
 
 @dataclass
@@ -34,7 +34,7 @@ class FormulaParser:
         candidate = expr.strip().rstrip(".;")
         if not candidate:
             return None
-        if not re.fullmatch(r"[0-9nN\+\-\*/\^\(\)\s]+", candidate):
+        if not re.fullmatch(r"[0-9nN\+\-\*/\^\(\)\sa-zA-Z]+", candidate):
             return None
         return candidate
 
@@ -60,6 +60,11 @@ class UnaryNode:
         self.op = op
         self.operand = operand
 
+class FuncNode:
+    def __init__(self, name: str, arg: object):
+        self.name = name
+        self.arg = arg
+
 
 Token = Tuple[str, Union[int, str]]
 
@@ -73,20 +78,28 @@ def _tokenize(expr: str) -> List[Token]:
             raise ValueError("Invalid token")
         pos = m.end()
         if m.group(1):
-            tokens.append(("INT", int(m.group(1))))
+            func_name = m.group(1).lower()
+            if func_name == "n":
+                tokens.append(("VAR", "n"))
+            elif func_name in ("floor", "ceil"):
+                tokens.append(("FUNC", func_name))
+            else:
+                raise ValueError(f"Unsupported identifier: {func_name}")
         elif m.group(2):
-            tokens.append(("VAR", "n"))
+            tokens.append(("INT", int(m.group(2))))
         elif m.group(3):
-            tokens.append(("ADD" if m.group(3) == "+" else "SUB", m.group(3)))
+            tokens.append(("VAR", "n"))
         elif m.group(4):
-            tokens.append(("MUL", "*"))
+            tokens.append(("ADD" if m.group(4) == "+" else "SUB", m.group(4)))
         elif m.group(5):
-            tokens.append(("DIV", "/"))
+            tokens.append(("MUL", "*"))
         elif m.group(6):
-            tokens.append(("POW", "^"))
+            tokens.append(("DIV", "/"))
         elif m.group(7):
-            tokens.append(("LP", "("))
+            tokens.append(("POW", "^"))
         elif m.group(8):
+            tokens.append(("LP", "("))
+        elif m.group(9):
             tokens.append(("RP", ")"))
         else:
             pass
@@ -155,7 +168,7 @@ class Parser:
             node = BinNode("^", node, NumNode(exp_tok[1]))
         return node
 
-    # primary := INT | VAR | '(' expr ')'
+    # primary := INT | VAR | FUNC '(' expr ')' | '(' expr ')'
     def primary(self) -> object:
         kind = self.peek()[0]
         if kind == "INT":
@@ -163,6 +176,15 @@ class Parser:
         if kind == "VAR":
             self.eat("VAR")
             return VarNode()
+        if kind == "FUNC":
+            func_name = self.eat("FUNC")[1]
+            # Only allow supported functions
+            if func_name not in ("floor", "ceil"):
+                raise ValueError(f"Unsupported function: {func_name}")
+            self.eat("LP")
+            arg = self.expr()
+            self.eat("RP")
+            return FuncNode(func_name, arg)
         if kind == "LP":
             self.eat("LP")
             node = self.expr()
@@ -185,6 +207,14 @@ def _eval_node(node: object, n: int) -> int:
     if isinstance(node, UnaryNode):
         val = _eval_node(node.operand, n)
         return val if node.op == "+" else -val
+    if isinstance(node, FuncNode):
+        import math
+        arg_val = _eval_node(node.arg, n)
+        if node.name == "floor":
+            return math.floor(arg_val)
+        if node.name == "ceil":
+            return math.ceil(arg_val)
+        raise ValueError(f"Unknown function: {node.name}")
     if isinstance(node, BinNode):
         left = _eval_node(node.left, n)
         right = _eval_node(node.right, n)
@@ -197,7 +227,7 @@ def _eval_node(node: object, n: int) -> int:
         if node.op == "/":
             if right == 0:
                 raise ValueError("Division by zero")
-            return left // right
+            return left / right
         if node.op == "^":
             return int(pow(left, right))
     raise ValueError("Invalid node")
