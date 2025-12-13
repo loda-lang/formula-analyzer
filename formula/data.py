@@ -3,29 +3,81 @@ from typing import Dict, Iterator, List, Optional, Set
 
 from formula.parser import ParsedFormula, FormulaParser
 
-# Temporary blacklist for OEIS formulas that are misleading/non-explicit in context
-BLACKLIST_OEIS: set[str] = {"A103320", "A326991", "A326994"}
+# Temporary blacklists for formulas that assume incorrect offsets or are misleading/non-explicit
+BLACKLIST_OEIS: set[str] = {
+    "A103320",
+    "A326991",
+    "A326994",
+    # Offset-misaligned or unreliable OEIS formulas
+    "A061026",
+    "A092181",
+    "A106230",
+    "A115077",
+    "A133043",
+    "A166931",
+    "A190414",
+    "A194769",
+    "A213826",
+    "A221533",
+    "A238812",
+    "A270257",
+    "A270510",
+    "A281907",
+    "A297895",
+    "A300576",
+    "A303400",
+    "A352758",
+    "A355753",
+    "A360416",
+    "A374224",
+}
+
+BLACKLIST_LODA: set[str] = {
+    # LODA formulas that assume offset 0 but OEIS offset is nonzero
+    "A044187",
+    "A044242",
+    "A156772",
+    "A156865",
+    "A156866",
+    "A156867",
+    "A156868",
+    "A157105",
+    "A157111",
+    "A157666",
+    "A157669",
+    "A157769",
+    "A157787",
+    "A157797",
+    "A157803",
+    "A157821",
+    "A157949",
+    "A157951",
+    "A158011",
+    "A158231",
+    "A158250",
+    "A158395",
+    "A158397",
+    "A158421",
+    "A254029",
+}
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)
 OEIS_HEADER_RE = re.compile(r"^(A\d{6}):\s*(.+)$")
 OEIS_FORMULA_RE = re.compile(r"a\(n\)\s*=", re.IGNORECASE)
 
 
-def iter_loda_formulas(path: str, parser: FormulaParser, offsets: Optional[dict[str, int]] = None) -> Iterator[ParsedFormula]:
+def iter_loda_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormula]:
     with open(path, "r", encoding="utf-8", errors="ignore") as handle:
         for raw_line in handle:
             parsed = _parse_loda_line(raw_line, parser)
             if not parsed:
                 continue
-            if offsets is not None:
-                seq_offset = offsets.get(parsed.sequence_id, 0)
-                # Skip formulas whose OEIS offset is nonzero; these often mismatch when treated as zero-based LODA code.
-                if seq_offset != 0:
-                    continue
+            if parsed.sequence_id in BLACKLIST_LODA:
+                continue
             yield parsed
 
 
-def iter_oeis_formulas(path: str, parser: FormulaParser, offsets: Optional[dict[str, int]] = None) -> Iterator[ParsedFormula]:
+def iter_oeis_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormula]:
     current_id: Optional[str] = None
     with open(path, "r", encoding="utf-8", errors="ignore") as handle:
         for raw_line in handle:
@@ -34,9 +86,6 @@ def iter_oeis_formulas(path: str, parser: FormulaParser, offsets: Optional[dict[
             if seq_match:
                 current_id = seq_match.group(1)
                 if current_id in BLACKLIST_OEIS:
-                    current_id = None
-                    continue
-                if offsets is not None and offsets.get(current_id, 0) != 0:
                     current_id = None
                     continue
                 remainder = seq_match.group(2)

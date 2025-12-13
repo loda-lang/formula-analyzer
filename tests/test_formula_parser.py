@@ -23,8 +23,8 @@ class TestFormulaParser(unittest.TestCase):
         oeis_path = str(self.data_dir / "formulas-oeis.txt")
         stripped_path = str(self.data_dir / "stripped")
 
-        loda_formulas = list(iter_loda_formulas(loda_path, self.parser, self.offsets))
-        oeis_formulas = list(iter_oeis_formulas(oeis_path, self.parser, self.offsets))
+        loda_formulas = list(iter_loda_formulas(loda_path, self.parser))
+        oeis_formulas = list(iter_oeis_formulas(oeis_path, self.parser))
         parsed_formulas = loda_formulas + oeis_formulas
 
         self.assertGreater(len(parsed_formulas), 0, "No formulas were parsed")
