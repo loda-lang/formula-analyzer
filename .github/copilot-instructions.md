@@ -213,11 +213,183 @@ if line.startswith('  ') and current_seq_id:
 - Parsing: split `Axxxxxx: n0,k`; `k` may be missing; allow negatives and large integers; skip malformed lines.
 - Usage in comparator/parity checks: adjust indexing with `n0`; avoid treating novelty that is purely an offset shift as interesting; do not penalize based on `k` aside from lexicographic/sorting needs.
 
+## Formula Parser Implementation
+
+### Module: formula/parser.py
+
+**Purpose**: Parse and evaluate mathematical expressions for formula validation.
+
+**Architecture**:
+- **Tokenizer** (`_tokenize`): Regex-based lexer producing tokens for literals, variables, operators, functions, and delimiters
+- **Parser** (`Parser` class): Recursive descent parser building AST from tokens
+- **AST Nodes**: Typed nodes for literals, variables, binary operations, unary operations, and function calls
+- **Evaluator** (`_eval_node`): Recursive evaluation of AST nodes
+
+**Supported Syntax**:
+- Arithmetic operations with proper precedence
+- Exponentiation
+- Whitelisted mathematical functions with arguments
+- Parentheses for grouping
+
+**Key Design Decisions**:
+1. **Float division**: Division uses true division (not integer division) to support functions like ceiling correctly
+2. **Function whitelist**: Only explicitly supported functions are recognized; unknown identifiers raise errors during tokenization
+3. **Case-insensitive variable**: Variable `n` handled case-insensitively
+4. **Parse-time validation**: Unsupported operations rejected during parsing (not just evaluation)
+
+**Error Handling**:
+- Parse errors return `None` from `FormulaParser.parse_expression()`
+- Evaluation errors (e.g., division by zero) raise ValueError
+- Unsupported functions/identifiers raise ValueError with descriptive message
+
+### Module: formula/data.py
+
+**Purpose**: Load formulas from files, filter with denylists, manage offsets.
+
+**Key Components**:
+
+**Denylists**:
+```python
+DENYLIST_OEIS: set[str]  # Sequences with offset/parsing issues
+DENYLIST_LODA: set[str]  # Sequences with offset mismatches
+```
+
+**Regex Patterns**:
+- `LODA_LINE_RE`: Matches `A123456: a(n) = <expr>`
+- `OEIS_HEADER_RE`: Matches `A123456: <text>`
+- `OEIS_FORMULA_RE`: Matches `a(n) =` within text
+
+**Functions**:
+- `iter_loda_formulas(path, parser)`: Yields parsed LODA formulas, skips denylist
+- `iter_oeis_formulas(path, parser)`: Yields parsed OEIS formulas, skips denylist, filters high-degree polynomials
+- `_parse_oeis_formula_text(seq_id, text, parser)`: Extracts `a(n) = <expr>`, validates charset, requires 'n' and operators
+- `load_offsets(path)`: Returns `Dict[str, int]` mapping sequence IDs to primary offset
+- `load_stripped_terms(path, target_ids, max_terms)`: Returns `Dict[str, List[int]]` of sequence terms
+
+**OEIS Formula Parsing Restrictions**:
+- Charset limited to basic operations to prevent misparsing complex formulas
+- Must contain variable `n`
+- Must include at least one operator
+- High-degree polynomials filtered to avoid unreliable cases
+
+These restrictions keep coverage focused on formulas that can be reliably validated with the current parser implementation.
+
+### Module: tests/test_formula_parser.py
+
+**Purpose**: Validate that parsed formulas produce correct sequence terms.
+
+**Test Method**: `test_parse_and_evaluate_simple_polynomials`
+
+**Workflow**:
+1. Parse LODA formulas from `data/formulas-loda.txt`
+2. Parse OEIS formulas from `data/formulas-oeis.txt`
+3. Load offsets from `data/offsets`
+4. Load sequence terms from `data/stripped`
+5. For each formula with available terms:
+   - Evaluate at positions: `offset + 0, offset + 1, offset + 2, ...`
+   - Compare with expected OEIS terms
+   - Track mismatches
+6. Assert: `mismatches == 0` (strict validation)
+
+**Key Metrics**:
+- Parsed formulas count (LODA + OEIS)
+- Checked sequences count (those with available terms)
+- Total comparisons (sum of terms checked across all sequences)
+- Mismatch count (target: 0)
+
+**Success Criteria**:
+- Zero mismatches in validation
+- Maximized formula coverage within parser capabilities
+
+**Debug Output**:
+```python
+print(f"Parsed formulas: {len(all_formulas)}; with OEIS terms: {len(formula_dict)}")
+print(f"Parsed LODA: {loda_count}; Parsed OEIS: {oeis_count}")
+print(f"Checked sequences: {len(checked)}; LODA: {loda_checked}; OEIS: {oeis_checked}")
+print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
+```
+
+## Offset Handling Details
+
+**The Offset Problem**:
+- OEIS sequences have varying starting indices (offset)
+- Common offsets: 0 (functions on non-negative integers), 1 ("numbers such that"), sometimes negative or large
+- LODA exports generally follow OEIS offsets, but some formulas contain incorrect or outdated offset information (often assuming n starts at 0); those should be ignored/denylisted
+- Formulas like `a(n) = floor((n-1)/2)` may be written for offset 0 but OEIS uses offset 1
+
+**Validation Strategy**:
+- Use OEIS offset as the ground truth
+- Evaluate formula at positions: `n = offset + idx` for each term at index `idx`
+- Require exact match: `formula.evaluate(offset + idx) == terms[idx]`
+- No fallback shifts or offset corrections attempted
+
+**Why This Is Strict**:
+- Prevents false positives from formulas that accidentally match at wrong indices
+- Makes offset assumptions explicit
+- Forces correct formula representation
+
+**When Formulas Fail Validation**:
+1. **Offset mismatch**: LODA formula uses different n convention than OEIS
+   - Example: `floor((n-1)/2)` at offset 1 shifts by one position
+   - Solution: Add to `DENYLIST_LODA`
+2. **Domain restrictions**: OEIS formula has special cases or constraints not in formula text
+   - Example: "for n > 0" but formula doesn't handle n=0
+   - Solution: Add to `DENYLIST_OEIS`
+3. **Parsing errors**: Formula text ambiguous or uses unsupported syntax
+   - Solution: Improve parser or add to denylist if unresolvable
+
+## Denylist Management
+
+**Location**: `formula/data.py`
+
+**DENYLIST_LODA**:
+- Sequences where LODA formula assumes offset 0 or embeds outdated/incorrect offset info while OEIS offset ≠ 0
+- Added when validation produces mismatch due to index shift
+- Examples with floor/ceil: A186704, A385730, A386858, A389928
+- Examples with other operations: A044187, A156772, A157105
+
+**DENYLIST_OEIS**:
+- Sequences where OEIS formula has validation issues
+- Reasons: offset mismatches, domain restrictions, parsing ambiguities
+- Examples: A001511, A004525, A006519
+
+**When to Add to Denylist**:
+1. Formula parses successfully
+2. Evaluation produces values
+3. Values don't match OEIS terms at documented offset
+4. Manual inspection confirms offset issue or formula limitation
+5. Add sequence ID to appropriate denylist with comment
+
+**Denylist Format**:
+```python
+DENYLIST_LODA: set[str] = {
+    # LODA formulas that assume offset 0 but OEIS offset is nonzero
+    "A044187",  # floor-based formula with offset 1
+    "A186704",  # floor((n-1)/2) assumes n starts at 0
+    # ...
+}
+```
+
+**Alternatives Considered**:
+- **Automatic offset correction**: Try formula at offset ±1, ±2 until match found
+  - Rejected: Too many false positives, hides real formula errors
+- **Dual-offset validation**: Accept match at either OEIS offset or offset 0
+  - Rejected: Allows incorrect formulas to pass validation
+- **Formula rewriting**: Automatically adjust `n` to `n-k` or `n+k`
+  - Rejected: Changes formula semantics, not reliable for complex expressions
+
+**Current Approach** (denylists):
+- ✓ Explicit and maintainable
+- ✓ Zero false positives in validation
+- ✓ Clear documentation of problematic sequences
+- ✓ Easy to audit and update
+- ⚠ Requires manual curation when adding floor/ceil or other new operations
+
 ## Dependencies and Environment
 
 - Python 3.7+ (uses dataclasses, type hints)
 - Standard library only (no external dependencies)
-- Uses: `re`, `typing`, `dataclasses`, `collections`, `enum`, `os`, `sys`
+- Uses: `re`, `typing`, `dataclasses`, `collections`, `enum`, `os`, `sys`, `math`
 
 ## Output Interpretation
 
@@ -239,6 +411,7 @@ if line.startswith('  ') and current_seq_id:
 
 ## Avoid These Common Mistakes
 
+**Formula Classification & Comparison**:
 - ❌ Assuming one formula per sequence in OEIS (there can be multiple)
 - ❌ Ignoring continuation lines in OEIS files (2-space indent)
 - ❌ Treating all explicit formulas equally (parity-based are less novel)
@@ -247,3 +420,13 @@ if line.startswith('  ') and current_seq_id:
 - ❌ Using absolute classification (formulas can have multiple types)
 - ❌ Claiming LODA provides a binomial formula when the OEIS sequence name already states it's a binomial coefficient
 - ❌ Ignoring sequence names when determining formula type coverage (names can imply types without explicit formula entries)
+
+**Parser & Validation**:
+- ❌ Using integer division for the division operator (breaks functions requiring true division)
+- ❌ Accepting unwhitelisted identifiers as function names (reject unsupported operations during tokenization)
+- ❌ Allowing OEIS formulas beyond current parser capabilities (restrict to reliably parseable patterns)
+- ❌ Evaluating formulas at wrong offset (use OEIS offset, not 0)
+- ❌ Expecting formulas to work at multiple offsets (strict validation: one offset only)
+- ❌ Adding sequences to denylist without verifying offset mismatch (check manually first)
+- ❌ Removing denylist entries to "improve coverage" (they prevent false validation failures)
+- ❌ Implementing automatic offset correction (creates false positives; use denylists instead)

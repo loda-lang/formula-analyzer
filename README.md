@@ -13,8 +13,15 @@ The formula analyzer classifies formulas into different types and identifies LOD
 
 ## Files
 
+### Core Analysis
 - **formula_analyzer.py** - Core analysis module with formula classification and comparison
 - **run_formula_analysis.py** - Command-line script to run the analysis
+
+### Formula Parsing & Validation
+- **formula/parser.py** - Mathematical expression parser with tokenizer and AST evaluator
+- **formula/data.py** - Data loading, filtering, and offset/denylist management
+- **formula/analyzer.py** - Formula classification and comparison logic
+- **tests/test_formula_parser.py** - Validation tests ensuring parsed formulas match OEIS terms
 
 ## Formula Types
 
@@ -184,6 +191,113 @@ The `FormulaComparator` compares formula types for each sequence:
 ### 3. Reporting
 
 Results are sorted by interest score and formatted into human-readable reports.
+
+## Formula Parser
+
+### Overview
+
+The `formula/parser.py` module provides a custom recursive descent parser that converts mathematical expressions into abstract syntax trees (AST) and evaluates them for validation against OEIS sequence terms.
+
+### Supported Operations
+
+- **Arithmetic**: Addition, subtraction, multiplication, division
+- **Exponentiation**: Power operations (e.g., `n^2`, `2^n`)
+- **Functions**: Currently `floor()` and `ceil()` (extensible)
+- **Variables**: Sequence index `n`
+
+### Architecture
+
+The parser uses a three-stage pipeline:
+
+1. **Tokenizer**: Converts expression strings into tokens using regex patterns
+2. **Parser**: Builds abstract syntax tree (AST) from tokens using recursive descent
+3. **Evaluator**: Recursively evaluates AST nodes at given values of `n`
+
+The AST uses typed nodes for literals, variables, operators, and function calls. The parser handles operator precedence and validates supported operations during parsing
+
+### Parsing Restrictions
+
+**OEIS Formulas**:
+- Must match pattern: `a(n) = <expr>`
+- Currently restricted to basic polynomial expressions for reliable parsing
+- Must contain variable `n` and at least one operator
+- Multi-line entries supported (2-space indent for continuation)
+
+**LODA Formulas**:
+- Format: `A123456: a(n) = <expr>`
+- Supports arithmetic operations, exponents, and whitelisted functions
+- Rejects unsupported operations (e.g., recursion, unknown functions)
+- Single line per sequence
+
+**Function Support**:
+- Functions must be explicitly whitelisted in the parser
+- Unsupported function names cause parse failure during tokenization
+- This prevents formulas with unimplemented operations from being validated
+
+### Validation Tests
+
+The `tests/test_formula_parser.py` module validates parsed formulas against OEIS sequence terms:
+
+1. **Load formulas**: Parse LODA and OEIS formulas from data files
+2. **Load offsets**: Read sequence offset values from `data/offsets`
+3. **Load terms**: Read actual sequence values from `data/stripped`
+4. **Evaluate**: For each formula, evaluate at positions `offset + 0, offset + 1, ...`
+5. **Compare**: Check if evaluated values match OEIS terms exactly
+6. **Report**: Count mismatches (target: **zero mismatches**)
+
+**Test Metrics**:
+- Parsed formulas count (LODA + OEIS)
+- Term comparisons across all sequences
+- Mismatch count (target: zero)
+
+## Offset Handling
+
+### The Offset Problem
+
+OEIS sequences have varying starting indices (offsets). Most sequences start at n=0 or n=1, but some start at negative indices or larger values. LODA formulas generally follow OEIS offsets, but a few formulas use incorrect or outdated offset information (often assuming n starts at 0); those cases are ignored.
+
+**Example**: Sequence A186704
+- OEIS offset: 1 (first term corresponds to n=1)
+- OEIS terms: `[0, 1, 1, 2, 2, 3, 3, ...]`
+- LODA formula: `floor((n-1)/2)`
+- At n=1: `floor(0/2) = 0` ✓ (matches first term)
+- At n=2: `floor(1/2) = 0` but OEIS term is 1 ✗ (mismatch!)
+
+The LODA formula is written assuming n=0 is the first term, but OEIS uses n=1.
+
+### Offset Alignment Strategy
+
+The validator evaluates formulas at **OEIS offset positions**:
+```python
+for idx, expected_term in enumerate(terms):
+    n = offset + idx  # Align to OEIS indexing
+    result = formula.evaluate(n)
+    if result != expected_term:
+        # Mismatch detected
+```
+
+**Strict Validation**: Formulas must produce exact matches at the documented offset. No fallback shifts or adjustments are attempted.
+
+### Denylists
+
+When formulas have offset mismatches that cannot be easily corrected, they are added to denylists to prevent false validation failures.
+
+**`DENYLIST_LODA`** (in `formula/data.py`):
+- Contains sequences with LODA formulas that assume offset 0 or embed outdated/incorrect offset info while OEIS uses a different offset
+- Examples: A044187, A186704, A385730, A386858, A389928
+- These formulas are skipped during parsing/validation
+
+**`DENYLIST_OEIS`** (in `formula/data.py`):
+- Contains sequences with OEIS formulas that have offset issues or unreliable parsing
+- Examples: A001511, A004525, A006519
+- These formulas are skipped during parsing/validation
+
+**Why Denylists?**:
+- Some LODA formulas use n-1 or n+k shifts that don't align with OEIS offset conventions
+- Some OEIS formulas have domain restrictions or special cases not captured in the formula text
+- Denylists maintain zero-mismatch validation while preserving coverage of correct formulas
+
+**Alternative Considered**: Automatic offset correction was explored but proved unreliable—too many edge cases and false corrections. Denylists provide explicit, maintainable control.
 
 ## Customization
 
