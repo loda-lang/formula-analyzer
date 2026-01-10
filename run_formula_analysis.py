@@ -4,6 +4,7 @@ Script to run formula analysis and generate detailed reports.
 """
 
 from formula.analyzer import analyze_formulas, FormulaType
+from formula.annotate import generate_parsed_loda_file, generate_parsed_oeis_file
 import os
 
 
@@ -15,6 +16,8 @@ def main():
     loda_file = os.path.join(base_dir, "data/formulas-loda.txt")
     names_file = os.path.join(base_dir, "data/names")
     output_file = os.path.join(base_dir, "results/interesting_formulas.txt")
+    parsed_loda_file = os.path.join(base_dir, "results/parsed-formulas-loda.txt")
+    parsed_oeis_file = os.path.join(base_dir, "results/parsed-formulas-oeis.txt")
     
     for f in [oeis_file, loda_file, names_file]:
         if not os.path.exists(f):
@@ -24,6 +27,12 @@ def main():
     print("=" * 80)
     print("LODA Formula Analysis Tool")
     print("=" * 80)
+    print()
+    
+    # Generate parsed formula files with check marks
+    print("Generating parsed formula files...")
+    generate_parsed_loda_file(loda_file, parsed_loda_file)
+    generate_parsed_oeis_file(oeis_file, parsed_oeis_file)
     print()
     
     # Run analysis
