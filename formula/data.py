@@ -9,9 +9,6 @@ DENYLIST_OEIS: set[str] = {
     # Offset-misaligned or unreliable OEIS formulas
     "A080770",
     "A092181",
-    "A106229",
-    "A106230",
-    "A115077",
     "A133043",
     "A166931",
     "A178372",
@@ -197,6 +194,11 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     if re.search(r'\bfor\s+n\s+mod\s+', prefix):
         return None
     
+    # Check for conditional natural-language prefixes (e.g., "for squarefree n, a(n) = ...")
+    # This catches cases like A115077 where the formula is only valid on a subset of n.
+    if re.search(r'\bfor\b[^,]{0,80}\bn\b[^,]{0,10},', prefix):
+        return None
+
     # Check for conditional formulas with "if ... then" pattern (e.g., "If n+1 is prime then a(n) = ...")
     if re.search(r'\bif\b.*\bthen\b', prefix):
         return None
