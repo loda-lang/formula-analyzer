@@ -106,7 +106,7 @@ class TestFormulaParser(unittest.TestCase):
                 print(f"  {ex['id']} [{ex['source']}] n={ex['n']} expr={ex['expr']} -> got {ex['got']}, expected {ex['expected']}")
 
         self.assertGreater(comparisons, 0, "Parsed formulas did not produce any comparable terms")
-        self.assertLess(mismatches, comparisons, "Too many mismatches for simple parser prototype")
+        self.assertEqual(mismatches, 0, "Formula evaluation mismatches detected")
         self.assertEqual(set(supported_functions), evaluated_functions, "Not all supported functions were exercised")
 
 
