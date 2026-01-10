@@ -44,7 +44,6 @@ DENYLIST_OEIS: set[str] = {
 
 DENYLIST_LODA: set[str] = {
     # LODA formulas that assume offset 0 but OEIS offset is nonzero
-    "A000245",
     "A037964",
     "A044187",
     "A044242",

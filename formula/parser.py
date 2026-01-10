@@ -248,20 +248,41 @@ def _eval_node(node: object, n: int) -> int:
 
             n_arg = _to_int(arg_vals[0])
             k_arg = _to_int(arg_vals[1])
-            if k_arg < 0:
-                return 0
-            if k_arg == 0:
-                return 1
-            if n_arg >= 0:
-                try:
-                    return math.comb(n_arg, k_arg)
-                except ValueError:
+
+            # Generalized binomial following the rules from https://arxiv.org/pdf/1105.3689.pdf
+            # mirrors the C++ reference implementation provided by the user.
+            if n_arg == math.inf or k_arg == math.inf:
+                return math.inf
+
+            sign = 1
+            n_work = n_arg
+            k_work = k_arg
+
+            if n_work < 0:
+                if k_work >= 0:
+                    sign = -1 if k_work % 2 else 1
+                    n_work = k_work - (n_work + 1)
+                elif n_work >= k_work:
+                    sign = -1 if (n_work - k_work) % 2 else 1
+                    n_old = n_work
+                    n_work = -(k_work + 1)
+                    k_work = n_old - k_work
+                else:
                     return 0
-            # Generalized binomial for negative n: C(-m, k) = (-1)^k * C(m + k - 1, k)
-            try:
-                return (-1) ** k_arg * math.comb(k_arg - n_arg - 1, k_arg)
-            except ValueError:
+
+            if k_work < 0 or n_work < k_work:
                 return 0
+
+            if n_work < 2 * k_work:
+                k_work = n_work - k_work
+
+            # Use math.comb for the main computation; guard against extremely large k.
+            try:
+                result = math.comb(n_work, k_work)
+            except (OverflowError, ValueError):
+                return 0
+
+            return sign * result
         if node.name == "sqrtint":
             if len(arg_vals) != 1:
                 raise ValueError("sqrtint() expects 1 argument")
