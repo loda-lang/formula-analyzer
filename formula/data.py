@@ -6,10 +6,7 @@ from formula.parser import ParsedFormula, FormulaParser
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
     "A103320",
-    "A326991",
-    "A326994",
     # Offset-misaligned or unreliable OEIS formulas
-    "A061026",
     "A080770",
     "A092181",
     "A106229",
@@ -198,6 +195,10 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     
     # Check for conditional formulas with modular constraints (e.g., "for n mod 6 = 0")
     if re.search(r'\bfor\s+n\s+mod\s+', prefix):
+        return None
+    
+    # Check for conditional formulas with "if ... then" pattern (e.g., "If n+1 is prime then a(n) = ...")
+    if re.search(r'\bif\b.*\bthen\b', prefix):
         return None
     
     # Check for diagonal/table formulas (e.g., "Diagonal: a(n) = ...", "Column k:")
