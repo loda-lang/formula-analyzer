@@ -41,6 +41,25 @@ DENYLIST_OEIS: set[str] = {
     "A355753",
     "A360416",
     "A374224",
+    # Typos in OEIS formula entries (submitted fixes pending)
+    "A008922",  # Has 3928*n^3 instead of 392*n^3
+    # Remaining offset mismatches (formula assumes different offset than OEIS declares)
+    "A200437",
+    "A213562",
+    "A213565",
+    "A213846",
+    "A217883",
+    "A217954",
+    "A242709",
+    "A250884",
+    "A302758",
+    "A343073",
+    "A349417",
+    "A349919",
+    "A374622",
+    "A378922",
+    "A379726",
+    "A385730",
 }
 
 DENYLIST_LODA: set[str] = {
@@ -171,9 +190,23 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     match = OEIS_FORMULA_RE.search(text)
     if not match:
         return None
+    
+    # Check for domain restrictions before the formula (e.g., "for n>=43", "for n>0")
+    prefix = text[:match.start()].lower()
+    if re.search(r'\bfor\s+n\s*[<>!=]', prefix):
+        return None
+    
+    # Check for conditional formulas with modular constraints (e.g., "for n mod 6 = 0")
+    if re.search(r'\bfor\s+n\s+mod\s+', prefix):
+        return None
+    
+    # Check for diagonal/table formulas (e.g., "Diagonal: a(n) = ...", "Column k:")
+    if re.search(r'\b(diagonal|column|row)\b', prefix):
+        return None
+    
     expr = text[match.end():].strip().rstrip(".;")
-    # Restrict OEIS parsing to simple integer polynomials (no division) to avoid misparsing
-    if not re.fullmatch(r"[0-9nN\+\-\*\^\(\)\s]+", expr):
+    # Restrict OEIS parsing to simple polynomials with basic operations to avoid misparsing
+    if not re.fullmatch(r"[0-9nN\+\-\*\^\(\)/\s]+", expr):
         return None
     if "n" not in expr.lower():
         return None

@@ -14,7 +14,15 @@ class ParsedFormula:
     node: object
 
     def evaluate(self, n: int) -> int:
-        return _eval_node(self.node, n)
+        result = _eval_node(self.node, n)
+        # Round to nearest integer if result is very close to an integer (floating-point precision)
+        if isinstance(result, float):
+            rounded = round(result)
+            # If within floating-point precision tolerance, return the integer
+            if abs(result - rounded) < 1e-9:
+                return rounded
+            return int(result)
+        return int(result)
 
 
 class FormulaParser:
