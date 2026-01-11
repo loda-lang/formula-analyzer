@@ -44,42 +44,41 @@ DENYLIST_OEIS: set[str] = {
 
 DENYLIST_LODA: set[str] = {
     # LODA formulas that assume offset 0 but OEIS offset is nonzero
-    "A044187",  # offset discrepancy: file=1, LODA=0
-    "A044242",  # offset discrepancy: file=1, LODA=0
-    "A065738",
-    "A120054",  # offset discrepancy: file=1, LODA=0
-    "A156772",  # offset discrepancy: file=1, LODA=0
-    "A156865",  # offset discrepancy: file=1, LODA=0
-    "A156866",  # offset discrepancy: file=1, LODA=0
-    "A156867",  # offset discrepancy: file=1, LODA=0
-    "A156868",  # offset discrepancy: file=1, LODA=0
-    "A157105",  # offset discrepancy: file=1, LODA=0
-    "A157111",  # offset discrepancy: file=1, LODA=0
-    "A157666",  # offset discrepancy: file=1, LODA=0
-    "A157669",  # offset discrepancy: file=1, LODA=0
-    "A157769",  # offset discrepancy: file=1, LODA=0
-    "A157787",  # offset discrepancy: file=1, LODA=0
-    "A157797",  # offset discrepancy: file=1, LODA=0
-    "A157803",  # offset discrepancy: file=1, LODA=0
-    "A157821",  # offset discrepancy: file=1, LODA=0
-    "A157949",  # offset discrepancy: file=1, LODA=0
-    "A157951",  # offset discrepancy: file=1, LODA=0
-    "A158011",  # offset discrepancy: file=1, LODA=0
-    "A158231",  # offset discrepancy: file=1, LODA=0
-    "A158250",  # offset discrepancy: file=1, LODA=0
-    "A158395",  # offset discrepancy: file=1, LODA=0
-    "A158397",  # offset discrepancy: file=1, LODA=0
-    "A158421",  # offset discrepancy: file=1, LODA=0
-    "A186704",
-    "A254029",  # offset discrepancy: file=1, LODA=0
-    "A276234",
-    "A277636",
-    "A363417",
-    "A378569",  # offset discrepancy: file=0, LODA=1 (REVERSED)
-    "A384288",
-    "A385730",
-    "A386858",  # offset discrepancy: file=1, LODA=0
-    "A389928",  # offset discrepancy: file=1, LODA=0
+    "A044187",  # offset discrepancy: OEIS=1, LODA=0
+    "A044242",  # offset discrepancy: OEIS=1, LODA=0
+    "A065738",  # offset discrepancy: OEIS=1, LODA=0
+    "A120054",  # offset discrepancy: OEIS=1, LODA=0
+    "A156772",  # offset discrepancy: OEIS=1, LODA=0
+    "A156865",  # offset discrepancy: OEIS=1, LODA=0
+    "A156866",  # offset discrepancy: OEIS=1, LODA=0
+    "A156867",  # offset discrepancy: OEIS=1, LODA=0
+    "A156868",  # offset discrepancy: OEIS=1, LODA=0
+    "A157105",  # offset discrepancy: OEIS=1, LODA=0
+    "A157111",  # offset discrepancy: OEIS=1, LODA=0
+    "A157666",  # offset discrepancy: OEIS=1, LODA=0
+    "A157669",  # offset discrepancy: OEIS=1, LODA=0
+    "A157769",  # offset discrepancy: OEIS=1, LODA=0
+    "A157787",  # offset discrepancy: OEIS=1, LODA=0
+    "A157797",  # offset discrepancy: OEIS=1, LODA=0
+    "A157803",  # offset discrepancy: OEIS=1, LODA=0
+    "A157821",  # offset discrepancy: OEIS=1, LODA=0
+    "A157949",  # offset discrepancy: OEIS=1, LODA=0
+    "A157951",  # offset discrepancy: OEIS=1, LODA=0
+    "A158011",  # offset discrepancy: OEIS=1, LODA=0
+    "A158231",  # offset discrepancy: OEIS=1, LODA=0
+    "A158250",  # offset discrepancy: OEIS=1, LODA=0
+    "A158395",  # offset discrepancy: OEIS=1, LODA=0
+    "A158397",  # offset discrepancy: OEIS=1, LODA=0
+    "A158421",  # offset discrepancy: OEIS=1, LODA=0
+    "A186704",  # formula is outdated: floor((n-1)/2) should be truncate((n-11)/2)+5
+    "A254029",  # offset discrepancy: OEIS=1, LODA=0
+    "A276234",  # offset discrepancy: OEIS=1, LODA=0
+    "A363417",  # wrong formula: produces binomial(-2n,2n) sequence instead of OEIS values
+    "A378569",  # offset discrepancy: OEIS=0, LODA=1 (REVERSED)
+    "A384288",  # systematic one-position shift: computed[n] = expected[n+1]
+    "A385730",  # offset discrepancy: OEIS=1, LODA=0
+    "A386858",  # offset discrepancy: OEIS=1, LODA=0
+    "A389928",  # offset discrepancy: OEIS=1, LODA=0
 }
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)
