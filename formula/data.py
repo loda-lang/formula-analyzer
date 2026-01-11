@@ -44,42 +44,42 @@ DENYLIST_OEIS: set[str] = {
 
 DENYLIST_LODA: set[str] = {
     # LODA formulas that assume offset 0 but OEIS offset is nonzero
-    "A044187",
-    "A044242",
+    "A044187",  # offset discrepancy: file=1, LODA=0
+    "A044242",  # offset discrepancy: file=1, LODA=0
     "A065738",
-    "A120054",
-    "A156772",
-    "A156865",
-    "A156866",
-    "A156867",
-    "A156868",
-    "A157105",
-    "A157111",
-    "A157666",
-    "A157669",
-    "A157769",
-    "A157787",
-    "A157797",
-    "A157803",
-    "A157821",
-    "A157949",
-    "A157951",
-    "A158011",
-    "A158231",
-    "A158250",
-    "A158395",
-    "A158397",
-    "A158421",
+    "A120054",  # offset discrepancy: file=1, LODA=0
+    "A156772",  # offset discrepancy: file=1, LODA=0
+    "A156865",  # offset discrepancy: file=1, LODA=0
+    "A156866",  # offset discrepancy: file=1, LODA=0
+    "A156867",  # offset discrepancy: file=1, LODA=0
+    "A156868",  # offset discrepancy: file=1, LODA=0
+    "A157105",  # offset discrepancy: file=1, LODA=0
+    "A157111",  # offset discrepancy: file=1, LODA=0
+    "A157666",  # offset discrepancy: file=1, LODA=0
+    "A157669",  # offset discrepancy: file=1, LODA=0
+    "A157769",  # offset discrepancy: file=1, LODA=0
+    "A157787",  # offset discrepancy: file=1, LODA=0
+    "A157797",  # offset discrepancy: file=1, LODA=0
+    "A157803",  # offset discrepancy: file=1, LODA=0
+    "A157821",  # offset discrepancy: file=1, LODA=0
+    "A157949",  # offset discrepancy: file=1, LODA=0
+    "A157951",  # offset discrepancy: file=1, LODA=0
+    "A158011",  # offset discrepancy: file=1, LODA=0
+    "A158231",  # offset discrepancy: file=1, LODA=0
+    "A158250",  # offset discrepancy: file=1, LODA=0
+    "A158395",  # offset discrepancy: file=1, LODA=0
+    "A158397",  # offset discrepancy: file=1, LODA=0
+    "A158421",  # offset discrepancy: file=1, LODA=0
     "A186704",
-    "A254029",
+    "A254029",  # offset discrepancy: file=1, LODA=0
     "A276234",
     "A277636",
     "A363417",
-    "A378569",
+    "A378569",  # offset discrepancy: file=0, LODA=1 (REVERSED)
     "A384288",
     "A385730",
-    "A386858",
-    "A389928",
+    "A386858",  # offset discrepancy: file=1, LODA=0
+    "A389928",  # offset discrepancy: file=1, LODA=0
 }
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)
