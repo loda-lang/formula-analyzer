@@ -44,7 +44,6 @@ DENYLIST_OEIS: set[str] = {
 
 DENYLIST_LODA: set[str] = {
     # LODA formulas with offset or validation issues
-    "A114563",  # formula is "a(n) = 0" but sequence starts with 1 (incorrect formula)
 }
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)
@@ -92,6 +91,11 @@ def _parse_loda_line(line: str, parser: FormulaParser) -> Optional[ParsedFormula
     if not match:
         return None
     seq_id, expr = match.group(1), match.group(2)
+
+    # Detect formulas with explicit initial terms: a(0) = ..., a(1) = ..., etc.
+    # These are not suitable for general formula validation.
+    if re.search(r'\ba\(\d+\)\s*=', expr):
+        return None
 
     # Strip trailing metadata (initial conditions, extra recurrences) by cutting at
     # the first comma that appears at parentheses depth zero, but keep commas
