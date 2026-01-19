@@ -5,8 +5,6 @@ from formula.parser import ParsedFormula, FormulaParser
 
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
-    "A008922",  # Has 3928*n^3 instead of 392*n^3
-    "A080770",
     "A092181",
     "A103320",
     "A133043",
@@ -140,6 +138,13 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     
     # Check for diagonal/table formulas (e.g., "Diagonal: a(n) = ...", "Column k:")
     if re.search(r'\b(diagonal|column|row)\b', prefix):
+        return None
+
+    # Reject trailing domain restrictions after the formula (e.g., "a(n) = ... for n >= 2, a(1)=17")
+    suffix = text[match.end():].lower()
+    if re.search(r'\bfor\s+n\s*[<>!=]', suffix):
+        return None
+    if re.search(r'\bfor\s+n\s+mod\b', suffix):
         return None
     
     expr = text[match.end():].strip().rstrip(".;")
