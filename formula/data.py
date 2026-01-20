@@ -5,39 +5,39 @@ from formula.parser import ParsedFormula, FormulaParser
 
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
-    "A092181",
-    "A103320",
-    "A133043",
-    "A166931",
-    "A190414",
-    "A194769",
-    "A200437",
-    "A213562",
-    "A213565",
-    "A213826",
-    "A213846",
-    "A217883",
-    "A217954",
-    "A221533",
-    "A238812",
-    "A242709",
-    "A250884",
-    "A277636",
-    "A281907",
-    "A297895",
-    "A299965",
-    "A302758",
-    "A303400",
-    "A343073",
-    "A349417",
-    "A349919",
-    "A352758",
-    "A355753",
-    "A360416",
-    "A374622",
-    "A378922",
-    "A379726",
-    "A385730",
+    "A092181",  # n^2*(3*n^2 - 4*n + 2) - assumes offset 0 but actual offset is 1
+    "A103320",  # n - assumes offset 0 but actual offset is 12
+    "A133043",  # n+4 - assumes offset 0 but actual offset is 1
+    "A166931",  # 2519 + n*2520 - assumes offset 0 but actual offset is 1
+    "A190414",  # 2*n - assumes offset 0 but actual offset is 1
+    "A194769",  # n + 2037573096 - assumes offset 0 but actual offset is 1
+    "A200437",  # (124952/567)*n^9 - ... - polynomial evaluation mismatch at offset 1
+    "A213562",  # (4/15)*n^5 + (11/24)*n^4 + ... - assumes offset 0 but actual offset is 1
+    "A213565",  # (16*n^5 + 85*n^4 + 15*n^3 - 25*n^2 - n)/60 - assumes offset 0 but actual offset is 1
+    "A213826",  # -n - 3*n^2 + 6*n*3 - invalid formula structure or offset mismatch
+    "A213846",  # n*(1 + n)*(1 - 2*n + 4*n^2)/6 - assumes offset 0 but actual offset is 1
+    "A217883",  # (1/24)*n^4 + (1/4)*n^3 + ... - marked as "Diagonal" but formula assumes different indexing
+    "A217954",  # (1/720)*n^6 + (1/48)*n^5 + ... - marked as "Diagonal" but formula assumes different indexing
+    "A221533",  # 2*n^2 - 2*n - 3 - conditional formula ("If (2n-1, 2n+1) is pair of twin primes")
+    "A238812",  # n + 1 - conditional formula (k=1 case, multiple branches)
+    "A242709",  # n*(n^3 + n - 2)/8 - conditional formula (even n only)
+    "A250884",  # (290548/3)*n^3 + 254464*n^2 + (669458/3)*n + 65536 - empirical formula
+    "A277636",  # (3*n^2 - 3*n + 1)^3 - assumes offset 0 but actual offset is 0 (formula indexed differently)
+    "A281907",  # 66483034025018711639862527490*n + 47867742232066880047611079 - assumes offset 0 but actual offset is 1
+    "A297895",  # n + 4047 - assumes offset 0 but actual offset is 1 (domain restriction: for n >= 4496)
+    "A299965",  # e.g.f. formula - not suitable for direct evaluation at integer n
+    "A302758",  # n^2*(n - 1)*(n + 1)/24 - assumes offset 0 but actual offset is 1 (other formula is valid)
+    "A303400",  # n + 10224 - assumes offset 0 but actual offset is 1
+    "A343073",  # (n+1)/2 - assumes offset 0 but actual offset is 2
+    "A349417",  # n^3/6 + n^2/2 - 2*n/3 + 2 - assumes offset 0 but actual offset is 3
+    "A349919",  # multiple formulas; one valid, others are recurrence/sum formulas
+    "A352758",  # 2*n - 1 - assumes offset 0 but actual offset is 1 (other formula is valid)
+    "A355753",  # 3*(2*n - 1) - assumes offset 0 but actual offset is 1
+    "A360416",  # formulas are recurrence relations or references to other sequences
+    "A374622",  # n^2/2+2 - assumes offset 0 but actual offset is 3
+    "A378922",  # 1 + 2*n*(n-1) + n^2*(n-1)*(2*n-1)/6 - assumes offset 0 but actual offset is 3
+    "A379726",  # 2*(n/3)^2+n/3 - assumes offset 0 but actual offset is 2
+    "A385730",  # (1/3)*(8 * n^3 + 7 * n + 3) - assumes offset 0 but actual offset is 1
 }
 
 DENYLIST_LODA: set[str] = {
