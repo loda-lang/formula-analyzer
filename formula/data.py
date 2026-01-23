@@ -5,7 +5,6 @@ from formula.parser import ParsedFormula, FormulaParser
 
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
-    "A092181",  # n^2*(3*n^2 - 4*n + 2) - assumes offset 0 but actual offset is 1
     "A103320",  # n - assumes offset 0 but actual offset is 12
     "A133043",  # n+4 - assumes offset 0 but actual offset is 1
     "A166931",  # 2519 + n*2520 - assumes offset 0 but actual offset is 1
@@ -42,6 +41,12 @@ DENYLIST_OEIS: set[str] = {
 
 DENYLIST_LODA: set[str] = {
     # LODA formulas with offset or validation issues
+    "A092181",  # n*(n*(n*(3*n-16)+32)-28)+9 - formula is for offset 1 but OEIS offset is 0
+    "A253942",  # 3*binomial(n+1,5) - LODA offset 4 produces 3,18,63... but OEIS offset 4 is 0,0,0,3,18,63... (shifted by 3)
+    "A349417",  # -n+binomial(n-1,3)+5 - LODA offset 3 but OEIS offset is 0
+    "A360416",  # n*(8*n-25)+20 - LODA offset 1 but OEIS offset is 0
+    "A385730",  # floor(((n-1)*((n-1)*(8*n-8)+7))/3)+1 - LODA offset 1 but OEIS offset is 0
+    "A390860",  # floor((7736*n+41527)/9072)-1 - LODA offset 0 but OEIS offset is 1
 }
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)

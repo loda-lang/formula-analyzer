@@ -50,12 +50,37 @@ The analyzer recognizes these formula types:
 ### Command Line
 
 ```bash
-# Run the analysis (uses default file paths)
+# Run analysis; missing data files are generated automatically
 python run_formula_analysis.py
+
+# Force regeneration of all data files (can take a few minutes)
+python run_formula_analysis.py --refresh-data
 
 # Or use the analyzer directly
 python formula_analyzer.py [oeis_file] [loda_file] [names_file] [output_file]
 ```
+
+### Preparing Data (automatic on first run)
+
+By default the script will generate any missing data files. To force a full
+refresh, use `--refresh-data`:
+
+```bash
+# Force refresh everything
+python run_formula_analysis.py --refresh-data
+
+# Custom locations
+python run_formula_analysis.py --refresh-data --data-dir custom/data --loda-home /path/to/loda
+```
+
+What happens under the hood:
+- Runs `loda update` once, then copies `names`, `offsets`, and `stripped` from
+    `$HOME/loda/seqs/oeis/` into `data/`.
+- Generates `data/formulas-loda.txt` via `loda export-formulas` (can take a few
+    minutes).
+- Downloads `https://api.loda-lang.org/v2/sequences/data/oeis/formulas.gz`,
+    ungzips it, and saves as `data/formulas-oeis.txt`.
+Only missing files are generated unless `--refresh-data` is provided.
 
 ### Python API
 
