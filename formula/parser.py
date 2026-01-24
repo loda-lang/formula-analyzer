@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+from fractions import Fraction
 from typing import Optional, List, Tuple, Union
 
 # Add comma to tokenizer to support multi-arg functions
@@ -15,6 +16,10 @@ class ParsedFormula:
 
     def evaluate(self, n: int) -> int:
         result = _eval_node(self.node, n)
+        if isinstance(result, Fraction):
+            if result.denominator == 1:
+                return int(result.numerator)
+            return float(result)
         # Round to nearest integer if result is very close to an integer (floating-point precision)
         if isinstance(result, float):
             rounded = round(result)
@@ -228,6 +233,16 @@ def _eval_node(node: object, n: int) -> int:
         import math
         # Evaluate all arguments first
         arg_vals = [_eval_node(arg, n) for arg in node.args]
+        def _to_int(value: Union[int, float, Fraction]) -> int:
+            if isinstance(value, Fraction):
+                if value.denominator != 1:
+                    raise ValueError("Expected integer argument")
+                return int(value.numerator)
+            if isinstance(value, float):
+                if not value.is_integer():
+                    raise ValueError("Expected integer argument")
+                return int(value)
+            return int(value)
         if node.name == "floor":
             if len(arg_vals) != 1:
                 raise ValueError("floor() expects 1 argument")
@@ -239,13 +254,6 @@ def _eval_node(node: object, n: int) -> int:
         if node.name == "binomial":
             if len(arg_vals) != 2:
                 raise ValueError("binomial() expects 2 arguments")
-            def _to_int(value: Union[int, float]) -> int:
-                if isinstance(value, float):
-                    if not value.is_integer():
-                        raise ValueError("binomial() expects integer arguments")
-                    return int(value)
-                return int(value)
-
             n_arg = _to_int(arg_vals[0])
             k_arg = _to_int(arg_vals[1])
 
@@ -286,16 +294,16 @@ def _eval_node(node: object, n: int) -> int:
         if node.name == "sqrtint":
             if len(arg_vals) != 1:
                 raise ValueError("sqrtint() expects 1 argument")
-            return math.isqrt(int(arg_vals[0]))
+            return math.isqrt(_to_int(arg_vals[0]))
         if node.name == "gcd":
             if len(arg_vals) != 2:
                 raise ValueError("gcd() expects 2 arguments")
-            return math.gcd(int(arg_vals[0]), int(arg_vals[1]))
+            return math.gcd(_to_int(arg_vals[0]), _to_int(arg_vals[1]))
         if node.name == "sumdigits":
             if len(arg_vals) not in (1, 2):
                 raise ValueError("sumdigits() expects 1 or 2 arguments")
-            x = int(arg_vals[0])
-            base = int(arg_vals[1]) if len(arg_vals) == 2 else 10
+            x = _to_int(arg_vals[0])
+            base = _to_int(arg_vals[1]) if len(arg_vals) == 2 else 10
             if base < 2:
                 raise ValueError("sumdigits() base must be >= 2")
             s = 0
@@ -319,7 +327,7 @@ def _eval_node(node: object, n: int) -> int:
         if node.op == "/":
             if right == 0:
                 raise ValueError("Division by zero")
-            return left / right
+            return Fraction(left, right)
         if node.op == "^":
             return int(pow(left, right))
     raise ValueError("Invalid node")

@@ -7,7 +7,6 @@ from formula.parser import ParsedFormula, FormulaParser
 DENYLIST_OEIS: set[str] = {
     "A103320",  # n - assumes offset 0 but actual offset is 12
     "A166931",  # 2519 + n*2520 - assumes offset 0 but actual offset is 1
-    "A200437",  # (124952/567)*n^9 - ... - polynomial evaluation mismatch at offset 1
     "A213562",  # (4/15)*n^5 + (11/24)*n^4 + ... - assumes offset 0 but actual offset is 1
     "A213565",  # (16*n^5 + 85*n^4 + 15*n^3 - 25*n^2 - n)/60 - assumes offset 0 but actual offset is 1
     "A213826",  # -n - 3*n^2 + 6*n*3 - invalid formula structure or offset mismatch
