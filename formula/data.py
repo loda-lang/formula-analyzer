@@ -16,7 +16,6 @@ DENYLIST_OEIS: set[str] = {
     "A221533",  # 2*n^2 - 2*n - 3 - conditional formula ("If (2n-1, 2n+1) is pair of twin primes")
     "A238812",  # n + 1 - conditional formula (k=1 case, multiple branches)
     "A242709",  # n*(n^3 + n - 2)/8 - conditional formula (even n only)
-    "A250884",  # (290548/3)*n^3 + 254464*n^2 + (669458/3)*n + 65536 - empirical formula
     "A277636",  # (3*n^2 - 3*n + 1)^3 - assumes offset 0 but actual offset is 0 (formula indexed differently)
     "A281907",  # 66483034025018711639862527490*n + 47867742232066880047611079 - assumes offset 0 but actual offset is 1
     "A297895",  # n + 4047 - assumes offset 0 but actual offset is 1 (domain restriction: for n >= 4496)
@@ -24,15 +23,11 @@ DENYLIST_OEIS: set[str] = {
     "A302758",  # n^2*(n - 1)*(n + 1)/24 - assumes offset 0 but actual offset is 1 (other formula is valid)
     "A303400",  # n + 10224 - assumes offset 0 but actual offset is 1
     "A343073",  # (n+1)/2 - assumes offset 0 but actual offset is 2
-    "A349417",  # n^3/6 + n^2/2 - 2*n/3 + 2 - assumes offset 0 but actual offset is 3
-    "A349919",  # multiple formulas; one valid, others are recurrence/sum formulas
     "A352758",  # 2*n - 1 - assumes offset 0 but actual offset is 1 (other formula is valid)
     "A355753",  # 3*(2*n - 1) - assumes offset 0 but actual offset is 1
     "A360416",  # formulas are recurrence relations or references to other sequences
     "A374622",  # n^2/2+2 - assumes offset 0 but actual offset is 3
-    "A378922",  # 1 + 2*n*(n-1) + n^2*(n-1)*(2*n-1)/6 - assumes offset 0 but actual offset is 3
     "A379726",  # 2*(n/3)^2+n/3 - assumes offset 0 but actual offset is 2
-    "A385730",  # (1/3)*(8 * n^3 + 7 * n + 3) - assumes offset 0 but actual offset is 1
 }
 
 DENYLIST_LODA: set[str] = {
