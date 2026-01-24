@@ -6,7 +6,6 @@ from formula.parser import ParsedFormula, FormulaParser
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
     "A103320",  # n - assumes offset 0 but actual offset is 12
-    "A133043",  # n+4 - assumes offset 0 but actual offset is 1
     "A166931",  # 2519 + n*2520 - assumes offset 0 but actual offset is 1
     "A190414",  # 2*n - assumes offset 0 but actual offset is 1
     "A194769",  # n + 2037573096 - assumes offset 0 but actual offset is 1
@@ -125,11 +124,15 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     
     # Check for domain restrictions before the formula (e.g., "for n>=43", "for n>0")
     prefix = text[:match.start()].lower()
-    if re.search(r'\bfor\s+n\s*[<>!=]', prefix):
+    if re.search(r'\bfor\s+n\s*(?:[<>]=?|!=)\s*-?\d+\s*[,;]?', prefix):
         return None
     
     # Check for conditional formulas with modular constraints (e.g., "for n mod 6 = 0")
     if re.search(r'\bfor\s+n\s+mod\s+', prefix):
+        return None
+
+    # Check for conditional linear congruence cases (e.g., "For n=4m then ...", "for n=4m+1")
+    if re.search(r'\bfor\s+n\s*=\s*\d+\s*m(\s*\+\s*\d+)?\b', prefix):
         return None
     
     # Check for conditional natural-language prefixes (e.g., "for squarefree n, a(n) = ...")
