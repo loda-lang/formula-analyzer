@@ -7,8 +7,6 @@ from formula.parser import ParsedFormula, FormulaParser
 DENYLIST_OEIS: set[str] = {
     "A103320",  # n - assumes offset 0 but actual offset is 12
     "A166931",  # 2519 + n*2520 - assumes offset 0 but actual offset is 1
-    "A190414",  # 2*n - assumes offset 0 but actual offset is 1
-    "A194769",  # n + 2037573096 - assumes offset 0 but actual offset is 1
     "A200437",  # (124952/567)*n^9 - ... - polynomial evaluation mismatch at offset 1
     "A213562",  # (4/15)*n^5 + (11/24)*n^4 + ... - assumes offset 0 but actual offset is 1
     "A213565",  # (16*n^5 + 85*n^4 + 15*n^3 - 25*n^2 - n)/60 - assumes offset 0 but actual offset is 1
@@ -124,7 +122,7 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     
     # Check for domain restrictions before the formula (e.g., "for n>=43", "for n>0")
     prefix = text[:match.start()].lower()
-    if re.search(r'\bfor\s+n\s*(?:[<>]=?|!=)\s*-?\d+\s*[,;]?', prefix):
+    if re.search(r'\bfor\s+(?:all\s+)?n\s*(?:[<>]=?|!=)\s*-?\d+\s*[,;]?', prefix):
         return None
     
     # Check for conditional formulas with modular constraints (e.g., "for n mod 6 = 0")
