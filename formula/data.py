@@ -11,9 +11,6 @@ DENYLIST_OEIS: set[str] = {
     "A213565",  # (16*n^5 + 85*n^4 + 15*n^3 - 25*n^2 - n)/60 - assumes offset 0 but actual offset is 1
     "A213826",  # -n - 3*n^2 + 6*n*3 - invalid formula structure or offset mismatch
     "A213846",  # n*(1 + n)*(1 - 2*n + 4*n^2)/6 - assumes offset 0 but actual offset is 1
-    "A221533",  # 2*n^2 - 2*n - 3 - conditional formula ("If (2n-1, 2n+1) is pair of twin primes")
-    "A238812",  # n + 1 - conditional formula (k=1 case, multiple branches)
-    "A242709",  # n*(n^3 + n - 2)/8 - conditional formula (even n only)
     "A277636",  # (3*n^2 - 3*n + 1)^3 - assumes offset 0 but actual offset is 0 (formula indexed differently)
     "A281907",  # 66483034025018711639862527490*n + 47867742232066880047611079 - assumes offset 0 but actual offset is 1
     "A297895",  # n + 4047 - assumes offset 0 but actual offset is 1 (domain restriction: for n >= 4496)
@@ -119,6 +116,10 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     
     # Check for conditional formulas with modular constraints (e.g., "for n mod 6 = 0")
     if re.search(r'\bfor\s+n\s+mod\s+', prefix):
+        return None
+
+    # Check for table column-specific formulas (e.g., "k=1:")
+    if re.search(r'\bk\s*=\s*\d+\s*:', prefix):
         return None
 
     # Check for conditional linear congruence cases (e.g., "For n=4m then ...", "for n=4m+1")
