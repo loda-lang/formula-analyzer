@@ -11,8 +11,6 @@ DENYLIST_OEIS: set[str] = {
     "A213565",  # (16*n^5 + 85*n^4 + 15*n^3 - 25*n^2 - n)/60 - assumes offset 0 but actual offset is 1
     "A213826",  # -n - 3*n^2 + 6*n*3 - invalid formula structure or offset mismatch
     "A213846",  # n*(1 + n)*(1 - 2*n + 4*n^2)/6 - assumes offset 0 but actual offset is 1
-    "A217883",  # (1/24)*n^4 + (1/4)*n^3 + ... - marked as "Diagonal" but formula assumes different indexing
-    "A217954",  # (1/720)*n^6 + (1/48)*n^5 + ... - marked as "Diagonal" but formula assumes different indexing
     "A221533",  # 2*n^2 - 2*n - 3 - conditional formula ("If (2n-1, 2n+1) is pair of twin primes")
     "A238812",  # n + 1 - conditional formula (k=1 case, multiple branches)
     "A242709",  # n*(n^3 + n - 2)/8 - conditional formula (even n only)
