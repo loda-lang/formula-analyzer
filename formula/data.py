@@ -1,7 +1,8 @@
 import re
 from typing import Dict, Iterator, List, Optional, Set
 
-from formula.parser import ParsedFormula, FormulaParser
+from formula.formula import Formula
+from formula.parser import FormulaParser
 
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
@@ -28,7 +29,7 @@ OEIS_HEADER_RE = re.compile(r"^(A\d{6}):\s*(.+)$")
 OEIS_FORMULA_RE = re.compile(r"a\(n\)\s*=", re.IGNORECASE)
 
 
-def iter_loda_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormula]:
+def iter_loda_formulas(path: str, parser: FormulaParser) -> Iterator[Formula]:
     with open(path, "r", encoding="utf-8", errors="ignore") as handle:
         for raw_line in handle:
             parsed = _parse_loda_line(raw_line, parser)
@@ -39,7 +40,7 @@ def iter_loda_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormu
             yield parsed
 
 
-def iter_oeis_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormula]:
+def iter_oeis_formulas(path: str, parser: FormulaParser) -> Iterator[Formula]:
     current_id: Optional[str] = None
     skip_next_formula = False
     with open(path, "r", encoding="utf-8", errors="ignore") as handle:
@@ -74,7 +75,7 @@ def iter_oeis_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormu
                         skip_next_formula = True
 
 
-def _parse_loda_line(line: str, parser: FormulaParser) -> Optional[ParsedFormula]:
+def _parse_loda_line(line: str, parser: FormulaParser) -> Optional[Formula]:
     match = LODA_LINE_RE.match(line.strip())
     if not match:
         return None
@@ -103,7 +104,7 @@ def _parse_loda_line(line: str, parser: FormulaParser) -> Optional[ParsedFormula
     return parser.parse_expression(seq_id, "loda", expr)
 
 
-def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> Optional[ParsedFormula]:
+def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> Optional[Formula]:
     match = OEIS_FORMULA_RE.search(text)
     if not match:
         return None
