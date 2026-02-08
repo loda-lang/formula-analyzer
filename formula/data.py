@@ -12,7 +12,6 @@ DENYLIST_OEIS: set[str] = {
     "A213846",  # n*(1 + n)*(1 - 2*n + 4*n^2)/6 - assumes offset 0 but actual offset is 1
     "A277636",  # (3*n^2 - 3*n + 1)^3 - assumes offset 0 but actual offset is 0 (formula indexed differently)
     "A281907",  # 66483034025018711639862527490*n + 47867742232066880047611079 - assumes offset 0 but actual offset is 1
-    "A302758",  # n^2*(n - 1)*(n + 1)/24 - assumes offset 0 but actual offset is 1 (other formula is valid)
     "A343073",  # (n+1)/2 - assumes offset 0 but actual offset is 2
     "A352758",  # 2*n - 1 - assumes offset 0 but actual offset is 1 (other formula is valid)
     "A355753",  # 3*(2*n - 1) - assumes offset 0 but actual offset is 1
@@ -42,12 +41,14 @@ def iter_loda_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormu
 
 def iter_oeis_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormula]:
     current_id: Optional[str] = None
+    skip_next_formula = False
     with open(path, "r", encoding="utf-8", errors="ignore") as handle:
         for raw_line in handle:
             line = raw_line.rstrip("\n")
             seq_match = OEIS_HEADER_RE.match(line)
             if seq_match:
                 current_id = seq_match.group(1)
+                skip_next_formula = False
                 if current_id in DENYLIST_OEIS:
                     current_id = None
                     continue
@@ -55,13 +56,22 @@ def iter_oeis_formulas(path: str, parser: FormulaParser) -> Iterator[ParsedFormu
                 parsed = _parse_oeis_formula_text(current_id, remainder.strip(), parser)
                 if parsed:
                     yield parsed
+                # Check if line ends with "otherwise:" to skip next formula
+                if remainder.rstrip().endswith("otherwise:"):
+                    skip_next_formula = True
                 continue
             if current_id and line.startswith("  "):
                 cont = line.strip()
                 if cont.lower().startswith("a(n) ="):
+                    if skip_next_formula:
+                        skip_next_formula = False
+                        continue
                     parsed = _parse_oeis_formula_text(current_id, cont, parser)
                     if parsed:
                         yield parsed
+                    # Check if line ends with "otherwise:" to skip next formula
+                    if cont.rstrip().endswith("otherwise:"):
+                        skip_next_formula = True
 
 
 def _parse_loda_line(line: str, parser: FormulaParser) -> Optional[ParsedFormula]:
@@ -133,6 +143,10 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     if re.search(r'\bfor\s+n\s*[<>!=]', suffix):
         return None
     if re.search(r'\bfor\s+n\s+mod\b', suffix):
+        return None
+    
+    # Reject piecewise formulas with parity conditions (e.g., "for n even", "for n odd")
+    if re.search(r'\bfor\s+n\s+(even|odd)\b', suffix):
         return None
     
     expr = text[match.end():].strip().rstrip(".;")
