@@ -13,8 +13,6 @@ DENYLIST_OEIS: set[str] = {
     "A213846",  # n*(1 + n)*(1 - 2*n + 4*n^2)/6 - assumes offset 0 but actual offset is 1
     "A277636",  # (3*n^2 - 3*n + 1)^3 - assumes offset 0 but actual offset is 0 (formula indexed differently)
     "A281907",  # 66483034025018711639862527490*n + 47867742232066880047611079 - assumes offset 0 but actual offset is 1
-    "A374622",  # n^2/2+2 - assumes offset 0 but actual offset is 3
-    "A379726",  # 2*(n/3)^2+n/3 - assumes offset 0 but actual offset is 2
 }
 
 DENYLIST_LODA: set[str] = {
@@ -133,12 +131,8 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     if re.search(r'\bfor\b[^,]{0,80}\bn\b[^,]{0,10},', prefix):
         return None
 
-    # Check for conditional formulas with "if ... then" pattern (e.g., "If n+1 is prime then a(n) = ...")
-    if re.search(r'\bif\b.*\bthen\b', prefix):
-        return None
-    
-    # Check for conditional formulas with "if ... , a(n) =" pattern (e.g., "If n is a Fermat prime, a(n) = ...")
-    if re.search(r'\bif\b.*,\s*$', prefix):
+    # Reject any formula with "if" in prefix (conditional/piecewise formulas)
+    if re.search(r'\bif\b', prefix):
         return None
     
     # Check for diagonal/table formulas (e.g., "Diagonal: a(n) = ...", "Column k:")
