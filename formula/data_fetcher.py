@@ -144,6 +144,7 @@ def prepare_data(
         if dry_run:
             _mark_skipped(f"would run {' '.join(cmd)} > {paths.formulas_loda}")
         else:
+            print(f"Running '{' '.join(cmd)}' (this may take a few minutes)...")
             export_fn(paths.formulas_loda)
             _mark_created(paths.formulas_loda)
     else:

@@ -85,7 +85,7 @@ Only missing files are generated unless `--refresh-data` is provided.
 ### Python API
 
 ```python
-from formula_analyzer import analyze_formulas, FormulaType
+from formula.analyzer import analyze_formulas, FormulaType
 
 # Run analysis
 results, comparator = analyze_formulas(
@@ -360,7 +360,7 @@ def _determine_interest(self, loda_types, oeis_types):
 ### Find sequences with explicit LODA formulas
 
 ```python
-from formula_analyzer import analyze_formulas, FormulaType
+from formula.analyzer import analyze_formulas, FormulaType
 
 results, comparator = analyze_formulas(
     'formulas-oeis.txt',
