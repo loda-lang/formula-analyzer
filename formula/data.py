@@ -13,7 +13,6 @@ DENYLIST_OEIS: set[str] = {
     "A213846",  # n*(1 + n)*(1 - 2*n + 4*n^2)/6 - assumes offset 0 but actual offset is 1
     "A277636",  # (3*n^2 - 3*n + 1)^3 - assumes offset 0 but actual offset is 0 (formula indexed differently)
     "A281907",  # 66483034025018711639862527490*n + 47867742232066880047611079 - assumes offset 0 but actual offset is 1
-    "A352758",  # 2*n - 1 - assumes offset 0 but actual offset is 1 (other formula is valid)
     "A355753",  # 3*(2*n - 1) - assumes offset 0 but actual offset is 1
     "A374622",  # n^2/2+2 - assumes offset 0 but actual offset is 3
     "A379726",  # 2*(n/3)^2+n/3 - assumes offset 0 but actual offset is 2
@@ -106,6 +105,11 @@ def _parse_loda_line(line: str, parser: FormulaParser) -> Optional[Formula]:
 def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> Optional[Formula]:
     match = OEIS_FORMULA_RE.search(text)
     if not match:
+        return None
+    
+    # Reject relational formulas where a(n) appears with another sequence reference
+    # (e.g., "A352757(n) - a(n) = 2*n - 1" or "A000045(n) + a(n) = 3*n")
+    if re.search(r'A\d{6}\([^)]+\)\s*[-+*/^]\s*a\(n\)', text, re.IGNORECASE):
         return None
     
     # Check for domain restrictions before the formula (e.g., "for n>=43", "for n>0")
