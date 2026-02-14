@@ -6,17 +6,15 @@ from formula.parser import FormulaParser
 
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
-    "A166931",  # 2519 + n*2520 - assumes offset 0 but actual offset is 1
-    "A213562",  # (4/15)*n^5 + (11/24)*n^4 + ... - assumes offset 0 but actual offset is 1
-    "A213565",  # (16*n^5 + 85*n^4 + 15*n^3 - 25*n^2 - n)/60 - assumes offset 0 but actual offset is 1
-    "A213826",  # -n - 3*n^2 + 6*n*3 - invalid formula structure or offset mismatch
-    "A213846",  # n*(1 + n)*(1 - 2*n + 4*n^2)/6 - assumes offset 0 but actual offset is 1
-    "A277636",  # (3*n^2 - 3*n + 1)^3 - assumes offset 0 but actual offset is 0 (formula indexed differently)
-    "A281907",  # 66483034025018711639862527490*n + 47867742232066880047611079 - assumes offset 0 but actual offset is 1
+    # All previous entries removed - they now validate correctly or are filtered by parser rules
 }
 
 DENYLIST_LODA: set[str] = {
     # LODA formulas with offset or validation issues
+    "A281907",  # 66483034025018711639862527490*n-66435166282786644759814916411 - offset mismatch
+    "A392462",  # floor(((n+12)*(n*(n+6)+47)+162)/162)-4 - offset or formula issue
+    "A392463",  # floor(((n+27)*(n*(n+6)+46)+162)/324)-4 - offset or formula issue
+    "A392884",  # binomial(-4*n-12,2)+2 - validation mismatch with negative binomial
 }
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)
