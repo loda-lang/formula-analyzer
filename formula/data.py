@@ -11,10 +11,6 @@ DENYLIST_OEIS: set[str] = {
 
 DENYLIST_LODA: set[str] = {
     # LODA formulas with offset or validation issues
-    "A281907",  # 66483034025018711639862527490*n-66435166282786644759814916411 - offset mismatch
-    "A392462",  # floor(((n+12)*(n*(n+6)+47)+162)/162)-4 - offset or formula issue
-    "A392463",  # floor(((n+27)*(n*(n+6)+46)+162)/324)-4 - offset or formula issue
-    "A392884",  # binomial(-4*n-12,2)+2 - validation mismatch with negative binomial
 }
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)
