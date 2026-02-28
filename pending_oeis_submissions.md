@@ -14,9 +14,11 @@ Corrections that have been verified but not yet submitted (awaiting processing o
 
 **Current formula**: `a(n) = ((4*n+7)*(4*n+2)) - (4*n+2)*(4*n+3)/2 + 4 for n > 2.`
 
-**Corrected formula**: `a(n) = ((4*n+7)*(4*n+2)) - (4*n+2)*(4*n+3)/2 + 4 for n > 1.`
+**Corrected formula**: `a(n) = (4*n+3)*(4*n-2) - (4*n-2)*(4*n-1)/2 + 4 for n > 1.`
 
-**Evidence**: The domain bound should be `n > 1`, not `n > 2`. At n=3 the formula gives 165, but a(3) = 99 and a(4) = 165 — it computes a(n+1) with the current bound.
+**Status**: Submitted to OEIS on 2026-02-28, in review.
+
+**Evidence**: The formula has an index-shift error: it computes a(n+1) instead of a(n). It expands to 8*n^2+26*n+15, whereas the correct formula (from the same entry) is a(n) = 8*n^2+10*n-3, and 8*(n+1)^2+10*(n+1)-3 = 8*n^2+26*n+15, confirming f(n) = a(n+1). The fix is to substitute n-1 for n in the expression: (4n+7) -> (4n+3), (4n+2) -> (4n-2), (4n+3) -> (4n-1). Verified: at n=2 gives (11)(6)-(6)(7)/2+4 = 49 = a(2); at n=3 gives (15)(10)-(10)(11)/2+4 = 99 = a(3); at n=4 gives (19)(14)-(14)(15)/2+4 = 165 = a(4). The domain can be extended to n > 1, matching the companion formula a(n) = -3 + 10*n + 8*n^2 for n > 1. At n=1 it gives 15 ≠ 20 = a(1).
 
 ## [A279112](https://oeis.org/A279112)
 
@@ -34,6 +36,8 @@ a(n) = (n^6 - 27*n^4 + 52*n^3 + 125*n^2 - 388*n + 189)/48 for odd n >= 1.
 
 **Evidence**: The two sub-formulas after the `IF(MOD)` formula are missing their parity restrictions. The first is valid only for even n >= 2, and the second only for odd n >= 1. For n=3 (odd), the first formula gives 1.5 (not integer) while the second gives 2 = a(3). For n=4 (even), the first gives 20 = a(4) while the second gives 23.9 (not integer).
 
+**Status**: Submitted to OEIS on 2026-02-28, in review.
+
 ## [A003600](https://oeis.org/A003600)
 
 **Current formula**: `a(n) = binomial(n+2, n-1) + binomial(n, n-1).` (no domain restriction)
@@ -41,6 +45,8 @@ a(n) = (n^6 - 27*n^4 + 52*n^3 + 125*n^2 - 388*n + 189)/48 for odd n >= 1.
 **Corrected formula**: `a(n) = binomial(n+2, n-1) + binomial(n, n-1) for n >= 1.`
 
 **Evidence**: At n=0, both binomial arguments have k = n-1 = -1 (negative), giving binomial(2,-1) + binomial(0,-1) = 0 + 0 = 0, but a(0) = 1. For all n >= 1 the formula is correct: n=1 gives 1+1=2, n=2 gives 4+2=6, n=3 gives 10+3=13, etc. The sequence name itself already notes `(n^3 + 3*n^2 + 8*n)/6 (n > 0)` and the PARI code uses `if(n, ..., 1)`, both acknowledging a(0) is a special case.
+
+**Status**: Submitted to OEIS on 2026-02-28, in review.
 
 ## [A006470](https://oeis.org/A006470)
 

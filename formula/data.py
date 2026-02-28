@@ -19,14 +19,14 @@ DENYLIST_OEIS: set[str] = {
     "A215543",   # stale local formula missing /2; OEIS corrected Aug 2025; awaiting refresh
     "A244501",   # OEIS notation 1/48*n^6 parsed as (1/48)*n^6 instead of n^6/48
     # Parity-specific formulas lacking parity markers
-    "A279112",   # sub-formulas missing parity markers: should be "for n>=2 and n even" / "for n>=1 and n odd"
+    "A279112",   # sub-formulas missing parity markers: should be "for n>=2 and n even" / "for n>=1 and n odd"; OEIS correction submitted 2026-02-28
     "A299256",   # parity-alternating formulas produce fractional results
     # Off-by-one domain in OEIS formula text
-    "A303295",   # ((4n+7)*(4n+2))-(4n+2)*(4n+3)/2+4 for n>2 shifted by 1; correct for n>1
+    "A303295",   # ((4n+7)*(4n+2))-(4n+2)*(4n+3)/2+4 computes a(n+1) not a(n); OEIS correction submitted 2026-02-28
     # Binomial formulas with fractional arguments and large gamma values — float precision issue
     "A364517",   # binomial(9*n/2, 2*n) loses precision at n>=3 due to large gamma values
     # Binomial formulas with missing/incorrect domain restrictions
-    "A003600",   # binomial(n+2,n-1)+binomial(n,n-1) gives 0 at n=0 (k=-1); valid from n>=1; OEIS missing domain
+    "A003600",   # binomial(n+2,n-1)+binomial(n,n-1) gives 0 at n=0 (k=-1); valid from n>=1; OEIS correction submitted 2026-02-28
     "A006470",   # binomial(n+2,2)*binomial(n+4,3)/2 computes a(n+1) not a(n); off-by-one in Zerinvary Lajos 2005 formula
     "A027930",   # Greubel formula has binomial(n-1,n-7) but should be binomial(n,n-7); typo n-1 instead of n
     "A056118",   # Greubel formula 11*C(n+5,5)-8*C(n+4,4) has wrong coefficient: -8 should be -10
