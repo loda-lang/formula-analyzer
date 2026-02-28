@@ -413,6 +413,38 @@ print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
 - ✓ Easy to audit and update
 - ⚠ Requires manual curation when adding floor/ceil or other new operations
 
+## Diagnosing Formula Issues
+
+### Diagnostic Script: `diagnose_formula.py`
+
+A helper script that automates data collection and basic checks for investigating denylist entries or formula mismatches.
+
+**Usage**:
+```bash
+python diagnose_formula.py A003600
+python diagnose_formula.py A003600 A006470 A027930
+```
+
+**What it does** (for each sequence ID):
+1. Shows denylist membership (OEIS, LODA, or none)
+2. Displays the sequence name/description from `data/names`
+3. Shows the OEIS offset and first 20 terms from `data/stripped`
+4. Lists all OEIS formula file lines (header + continuations)
+5. Shows the LODA formula line if present
+6. For each `a(n)=` formula, attempts parsing through the real pipeline (`_parse_oeis_formula_text`)
+7. Evaluates parsed formulas at up to 10 positions and reports OK/MISMATCH per term
+
+**When to use**:
+- Investigating a denylist entry to determine the root cause
+- Checking whether a formula mismatch is a domain issue, off-by-one, or genuine error
+- Verifying a proposed correction before submitting to OEIS
+- Quick triage of multiple sequences at once
+
+**After running the script**, use the output to determine the next step:
+- If the formula is correct from a higher n: missing domain restriction → submit OEIS correction
+- If the formula is off by a constant or shifted: formula typo → submit OEIS correction
+- If local data differs from OEIS website: stale data → refresh via `mcp_loda_refresh_sequence`
+
 ## Validating OEIS Entries
 
 When a formula mismatch is detected, validate the OEIS entry to determine whether the error is in our local data or on the OEIS website.
