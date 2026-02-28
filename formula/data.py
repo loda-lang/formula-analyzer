@@ -16,7 +16,7 @@ DENYLIST_OEIS: set[str] = {
     "A215543",   # stale local formula missing /2; OEIS corrected Aug 2025; awaiting refresh
     "A244501",   # OEIS notation 1/48*n^6 parsed as (1/48)*n^6 instead of n^6/48
     # Parity-specific formulas lacking parity markers
-    "A279112",   # even/odd sub-formulas after IF(MOD) conditional
+    "A279112",   # sub-formulas missing parity markers: should be "for n>=2 and n even" / "for n>=1 and n odd"
     "A299256",   # parity-alternating formulas produce fractional results
     # Off-by-one domain in OEIS formula text
     "A303295",   # ((4n+7)*(4n+2))-(4n+2)*(4n+3)/2+4 for n>2 shifted by 1; correct for n>1

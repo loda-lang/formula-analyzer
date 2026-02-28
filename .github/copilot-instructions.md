@@ -171,6 +171,7 @@ if line.startswith('  ') and current_seq_id:
 
 ### Output Files
 - `results/interesting_formulas.txt`: Human-readable report
+- `pending_oeis_submissions.md`: Tracked OEIS corrections — verified but not yet submitted or awaiting processing. Add new entries here when an OEIS formula error is confirmed; remove entries once the correction has been submitted and accepted.
 - Use `max_results` parameter for console vs. file output
 - Full report to file, summary (50 entries) to console
 
@@ -362,8 +363,9 @@ print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
 3. **OEIS formula errors**: Formula text has typos, wrong domain bounds, missing factors, or off-by-one errors
    - Example: formula missing `/2`, or domain `for n >= k` off by 1
    - Solution: Submit a correction to OEIS; add to `DENYLIST_OEIS` until corrected and refreshed. Track the correction submission date in the denylist comment. Once the correction is published and local data is refreshed, remove from denylist.
-4. **Parity-specific formulas**: Two sub-formulas for even/odd n not distinguishable by parser
-   - Solution: Add to `DENYLIST_OEIS`
+4. **Parity-specific formulas**: Two sub-formulas for even/odd n missing parity markers in their domain
+   - These are OEIS errors: the formulas should say `for even n >= k` / `for odd n >= k` but only say `for n > k`
+   - Solution: Submit a correction to OEIS adding the missing parity markers; add to `DENYLIST_OEIS` until corrected
 5. **Notation ambiguity**: OEIS notation like `1/48*n^6` misinterpreted by parser
    - Solution: Add to `DENYLIST_OEIS` (parser limitation)
 
@@ -435,29 +437,34 @@ Compare the OEIS website data against local files:
 4. Re-run tests to confirm the fix
 
 **If the OEIS formula is genuinely wrong** (website matches local data but formula doesn't match terms):
-1. Evaluate the formula at several positions using the documented offset
-2. Compare with the listed terms to confirm the mismatch pattern
-3. Identify the error type:
+1. Identify which formula causes the mismatch. OEIS entries often contain multiple formulas per sequence (header line + continuation lines). Temporarily remove the sequence from the denylist, run tests, and check the error output to see which specific formula(s) fail. Alternatively, evaluate each parseable formula against the terms manually.
+2. Evaluate the failing formula at several positions using the documented offset
+3. Compare with the listed terms to confirm the mismatch pattern
+4. Identify the error type:
    - **Off-by-one domain**: Formula gives `a(n+1)` instead of `a(n)`. Fix: shift domain bound by 1 or substitute `n-1` and re-expand.
    - **Wrong constant/coefficient**: Formula is off by a fixed amount at every point. Fix: compute the correct constant from the terms.
-   - **Non-integer values**: Polynomial produces fractions for some n. Fix: check for missing denominators or wrong coefficients.
+   - **Non-integer values**: Polynomial produces fractions for some n. Fix: check for missing denominators or wrong coefficients. If fractions appear only for one parity of n, the formula may be a parity sub-formula missing its even/odd domain marker.
    - **Notation ambiguity**: OEIS notation like `1/48*n^6` can be misread. This is a parser limitation, not always an OEIS error.
-4. Derive the corrected formula and verify it against terms
-5. Submit a correction to the OEIS (requires an OEIS account)
-6. Keep the sequence in the denylist until the correction is published and local data is refreshed
+5. Derive the corrected formula and verify it against terms
+6. Submit a correction to the OEIS (requires an OEIS account)
+7. Keep the sequence in the denylist until the correction is published and local data is refreshed
 
 ### Submitting OEIS Corrections
 
-Go to `https://oeis.org/AXXXXXX`, click **edit**, update the formula line, and add an edit comment explaining:
+When a genuine OEIS formula error is confirmed, add the correction to `pending_oeis_submissions.md` with the current formula, corrected formula, and evidence. This file tracks all pending corrections.
+
+To submit: go to `https://oeis.org/AXXXXXX`, click **edit**, update the formula line, and add an edit comment explaining:
 - What was wrong (e.g., "formula off by one index", "constant should be 1212 not 1222")
 - Evidence (e.g., "200*7 - 1222 = 178 but a(7) = 188")
 - The corrected formula with its valid domain
+
+After submission, update the denylist comment with the submission date. Once the correction is published and local data is refreshed, remove the entry from both the denylist and `pending_oeis_submissions.md`.
 
 ### Common OEIS Error Patterns
 
 - **Off-by-one in domain bounds**: Most frequent error. The formula is mathematically correct but the stated domain `for n >= k` is off by 1. Often caused by the contributor using 1-based indexing while the sequence has offset 0, or vice versa.
 - **Typos in polynomial coefficients**: Wrong constant term, missing factor (e.g., `/2`), or swapped signs.
-- **Parity-specific formulas without markers**: Two sub-formulas for even/odd n presented as a single formula or with ambiguous `IF(MOD(...))` notation.
+- **Parity-specific formulas without markers**: Two sub-formulas for even/odd n presented after an `IF(MOD(...))` conditional but missing their parity restrictions (e.g., `for n>1` instead of `for even n >= 2`). Identifiable because one formula produces non-integer values for one parity of n.
 
 ## Dependencies and Environment
 
