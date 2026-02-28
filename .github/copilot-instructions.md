@@ -376,7 +376,8 @@ print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
 2. Evaluation produces values
 3. Values don't match OEIS terms at documented offset
 4. Manual inspection confirms offset issue or formula limitation
-5. Add sequence ID to appropriate denylist with comment
+5. If the local offset or formula data doesn't match the data on the OEIS website, refresh the sequence using the LODA MCP server (`mcp_loda_refresh_sequence`), wait for the updated data, and then remove the sequence from the denylist — do NOT add it
+6. Otherwise (genuine formula error), add sequence ID to appropriate denylist with comment
 
 **Denylist Format**:
 ```python
