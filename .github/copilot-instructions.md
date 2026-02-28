@@ -498,6 +498,28 @@ To submit: go to `https://oeis.org/AXXXXXX`, click **edit**, update the formula 
 
 After submission, update the denylist comment with the submission date. Once the correction is published and local data is refreshed, remove the entry from both the denylist and `pending_oeis_submissions.md`.
 
+### Checking OEIS Submissions
+
+When asked to check or review a submitted OEIS correction, fetch the draft page and verify the edit:
+
+1. **Fetch the draft**: Use `https://oeis.org/draft/AXXXXXX` to see the proposed changes (additions in bold blue, deletions in faded red).
+2. **Verify the change is correct**:
+   - Confirm the corrected formula matches what was documented in `pending_oeis_submissions.md`
+   - Check that only the intended lines were modified (no accidental edits to other formulas)
+   - Verify the domain restriction is appropriate (not too narrow, not too wide)
+   - For domain additions: verify the formula fails at the boundary (e.g., at `n = k-1` for `n >= k`)
+   - For coefficient corrections: verify the corrected formula matches terms at multiple positions
+   - For index-shift fixes: verify the corrected expression is algebraically equivalent to substituting `n-1` in the original
+3. **Check the edit comment**: Should clearly explain what was wrong and provide evidence
+4. **Check attribution**: The "Corrected by" line should include the editor's name and date
+5. **Status**: Should be "proposed" (awaiting reviewer approval)
+
+**Common issues to watch for in submissions**:
+- Accidentally editing the wrong formula line in multi-formula entries
+- Missing or incorrect attribution format (should be `_Name_, Mon DD YYYY`)
+- Domain restriction that is too tight (formula works at more values than stated) or too loose
+- Forgetting to remove trailing periods or semicolons from corrected formula text
+
 ### Common OEIS Error Patterns
 
 - **Off-by-one in domain bounds**: Most frequent error. The formula is mathematically correct but the stated domain `for n >= k` is off by 1. Often caused by the contributor using 1-based indexing while the sequence has offset 0, or vice versa.
