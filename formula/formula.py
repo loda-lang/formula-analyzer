@@ -1,7 +1,7 @@
 import math
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import List, Union
+from typing import List, Optional, Union
 
 
 class NumNode:
@@ -176,6 +176,7 @@ class Formula:
     source: str
     expression: str
     node: object
+    lower_bound: Optional[int] = None
 
     def evaluate(self, n: int) -> int:
         result = eval_node(self.node, n)

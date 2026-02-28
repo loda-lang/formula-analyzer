@@ -31,7 +31,18 @@ class TestFormulaParser(unittest.TestCase):
         self.assertGreater(len(parsed_formulas), 0, "No formulas were parsed")
 
         target_ids = {formula.sequence_id for formula in parsed_formulas}
-        stripped_terms = load_stripped_terms(stripped_path, target_ids, max_terms=6)
+        # Compute max_terms needed: for domain-restricted formulas, we need
+        # (lower_bound - offset) + 5 terms. Use the max across all formulas.
+        max_skip = 0
+        for formula in parsed_formulas:
+            if formula.lower_bound is not None:
+                offset = self.offsets.get(formula.sequence_id, 0)
+                skip = formula.lower_bound - offset
+                if skip > max_skip:
+                    max_skip = skip
+        max_terms = max_skip + 6  # +5 to check, +1 for safety
+        max_terms = max(max_terms, 6)  # at least the original default
+        stripped_terms = load_stripped_terms(stripped_path, target_ids, max_terms=max_terms)
 
         checked_sequences = 0
         checked_loda = 0
@@ -47,9 +58,13 @@ class TestFormulaParser(unittest.TestCase):
             terms = stripped_terms.get(formula.sequence_id)
             if not terms:
                 continue
+            # Effective lower bound: explicit domain restriction, or sequence offset
+            lower_bound = formula.lower_bound if formula.lower_bound is not None else offset
+            # Skip terms below the formula's domain
+            start_idx = max(0, lower_bound - offset)
             has_comparison = False
-            limit = min(len(terms), 5)
-            for idx in range(limit):
+            limit = min(len(terms), start_idx + 5)
+            for idx in range(start_idx, limit):
                 n = offset + idx
                 try:
                     value = formula.evaluate(n)

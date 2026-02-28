@@ -15,10 +15,10 @@ TOKEN_REGEX = re.compile(r"\s*(?:([a-zA-Z]+)|([0-9]+)|([nN])|([+\-])|(\*)|(/)|(\
 
 
 class FormulaParser:
-    def parse_expression(self, seq_id: str, source: str, expr: str) -> Optional[Formula]:
-        return self._build_formula(seq_id, source, expr)
+    def parse_expression(self, seq_id: str, source: str, expr: str, lower_bound: Optional[int] = None) -> Optional[Formula]:
+        return self._build_formula(seq_id, source, expr, lower_bound)
 
-    def _build_formula(self, seq_id: str, source: str, expr: str) -> Optional[Formula]:
+    def _build_formula(self, seq_id: str, source: str, expr: str, lower_bound: Optional[int] = None) -> Optional[Formula]:
         cleaned = self._sanitize_expression(expr)
         if cleaned is None:
             return None
@@ -26,7 +26,7 @@ class FormulaParser:
             node = _parse_expression(cleaned)
         except ValueError:
             return None
-        return Formula(sequence_id=seq_id, source=source, expression=cleaned, node=node)
+        return Formula(sequence_id=seq_id, source=source, expression=cleaned, node=node, lower_bound=lower_bound)
 
     def _sanitize_expression(self, expr: str) -> Optional[str]:
         candidate = expr.strip().rstrip(".;")

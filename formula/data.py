@@ -6,7 +6,20 @@ from formula.parser import FormulaParser
 
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
-    # All previous entries removed - they now validate correctly or are filtered by parser rules
+    # Off-by-one offset issues in OEIS formula text
+    "A007183",   # 3*n-27 for n>=23 is shifted by 1
+    "A228396",   # formula off by one index
+    "A258272",   # 200*n-1222 for n>=7 shifted by 1
+    "A297740",   # 34*n^2+30*n+9 for n>=6 shifted by 1
+    # OEIS formula typos / missing factors
+    "A140228",   # n*(274+85*n+n^4)/60 produces non-integer values
+    "A215543",   # missing /2 in formula text
+    "A244501",   # formula doesn't match terms at stated domain
+    # Parity-specific formulas lacking parity markers
+    "A279112",   # even/odd sub-formulas after IF(MOD) conditional
+    "A299256",   # parity-alternating formulas produce fractional results
+    # Ambiguous operator precedence in OEIS notation
+    "A303295",   # ((4n+7)(4n+2))-(4n+2)*(4n+3)/2+4 precedence issue
 }
 
 DENYLIST_LODA: set[str] = {
@@ -95,6 +108,14 @@ def _parse_loda_line(line: str, parser: FormulaParser) -> Optional[Formula]:
     return parser.parse_expression(seq_id, "loda", expr)
 
 
+def _extract_lower_bound(op: str, value: int) -> int:
+    """Convert a domain restriction operator and value to an inclusive lower bound."""
+    if op == ">":
+        return value + 1
+    # >=
+    return value
+
+
 def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> Optional[Formula]:
     match = OEIS_FORMULA_RE.search(text)
     if not match:
@@ -105,10 +126,22 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     if re.search(r'A\d{6}\([^)]+\)\s*[-+*/^]\s*a\(n\)', text, re.IGNORECASE):
         return None
     
-    # Check for domain restrictions before the formula (e.g., "for n>=43", "for n>0")
-    prefix = text[:match.start()].lower()
-    if re.search(r'\bfor\s+(?:all\s+)?n\s*(?:[<>]=?|!=)\s*-?\d+\s*[,;]?', prefix):
+    # Reject relational formulas with multiplied a(n) (e.g., "3*a(n) = ...")
+    prefix_before_an = text[:match.start()]
+    if re.search(r'\d+\s*\*\s*$', prefix_before_an):
         return None
+    
+    prefix = text[:match.start()].lower()
+    lower_bound: Optional[int] = None
+
+    # Extract domain lower bound from prefix (e.g., "for n>=5, a(n) = ..." or "for n>0:")
+    prefix_bound = re.search(r'\bfor\s+(?:all\s+)?n\s*(>=?)\s*(\d+)\s*[,;:]?\s*$', prefix)
+    if prefix_bound:
+        lower_bound = _extract_lower_bound(prefix_bound.group(1), int(prefix_bound.group(2)))
+    else:
+        # Reject other prefix domain patterns we can't handle
+        if re.search(r'\bfor\s+(?:all\s+)?n\s*(?:[<]=?|!=)\s*-?\d+\s*[,;]?', prefix):
+            return None
     
     # Check for conditional formulas with modular constraints (e.g., "for n mod 6 = 0")
     if re.search(r'\bfor\s+n\s+mod\s+', prefix):
@@ -124,7 +157,7 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     
     # Check for conditional natural-language prefixes (e.g., "for squarefree n, a(n) = ...")
     # This catches cases like A115077 where the formula is only valid on a subset of n.
-    if re.search(r'\bfor\b[^,]{0,80}\bn\b[^,]{0,10},', prefix):
+    if not prefix_bound and re.search(r'\bfor\b[^,]{0,80}\bn\b[^,]{0,10},', prefix):
         return None
 
     # Reject any formula with "if" in prefix (conditional/piecewise formulas)
@@ -135,18 +168,43 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     if re.search(r'\b(diagonal|column|row)\b', prefix):
         return None
 
-    # Reject trailing domain restrictions after the formula (e.g., "a(n) = ... for n >= 2, a(1)=17")
+    # Extract or reject trailing domain restrictions after the formula
     suffix = text[match.end():].lower()
-    if re.search(r'\bfor\s+n\s*[<>!=]', suffix):
-        return None
+
+    # Check for modular or parity conditions (always reject)
     if re.search(r'\bfor\s+n\s+mod\b', suffix):
         return None
-    
-    # Reject piecewise formulas with parity conditions (e.g., "for n even", "for n odd")
     if re.search(r'\bfor\s+n\s+(even|odd)\b', suffix):
+        return None
+
+    # Try to extract suffix lower bound (e.g., "... for n >= 2" or "... for n > 0")
+    suffix_bound = re.search(r'\bfor\s+n\s*(>=?)\s*(\d+)\s*(.*)', suffix)
+    if suffix_bound:
+        after_bound = suffix_bound.group(3).strip().rstrip(".;,").strip()
+        # Reject compound conditions: "for n > 0 and even", "for n >= 1 and odd",
+        # "for n > 0 and n even", "for n > 3 and n odd"
+        if re.match(r'\band\s+(?:n\s+)?(even|odd)\b', after_bound):
+            return None
+        # Reject table/column indicators after domain (e.g., "for n > 0, k=3:")
+        if re.search(r'\bk\s*=\s*\d+', after_bound):
+            return None
+        # Reject "n=K:" table row indicators
+        if re.search(r'\bn\s*=\s*\d+\s*:', after_bound):
+            return None
+        bound = _extract_lower_bound(suffix_bound.group(1), int(suffix_bound.group(2)))
+        if lower_bound is None:
+            lower_bound = bound
+        else:
+            lower_bound = max(lower_bound, bound)
+    elif re.search(r'\bfor\s+n\s*[<!=]', suffix):
+        # Reject upper bounds or != constraints we can't handle
         return None
     
     expr = text[match.end():].strip().rstrip(".;")
+
+    # Strip trailing domain restriction from expression (e.g., "n^2 + 1 for n >= 2")
+    expr = re.sub(r'\s+for\s+n\s*>=?\s*\d+.*$', '', expr, flags=re.IGNORECASE).strip().rstrip(".;")
+
     # Restrict OEIS parsing to simple polynomials with basic operations to avoid misparsing
     if not re.fullmatch(r"[0-9nN\+\-\*\^\(\)/\s]+", expr):
         return None
@@ -157,7 +215,7 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
         return None
     if not any(op in expr for op in ["+", "*", "^"]):
         return None
-    return parser.parse_expression(seq_id, "oeis", expr)
+    return parser.parse_expression(seq_id, "oeis", expr, lower_bound=lower_bound)
 
 
 def load_offsets(path: str) -> Dict[str, int]:

@@ -262,15 +262,29 @@ DENYLIST_LODA: set[str]  # Sequences with offset mismatches
 **Functions**:
 - `iter_loda_formulas(path, parser)`: Yields parsed LODA formulas, skips denylist
 - `iter_oeis_formulas(path, parser)`: Yields parsed OEIS formulas, skips denylist, filters high-degree polynomials
-- `_parse_oeis_formula_text(seq_id, text, parser)`: Extracts `a(n) = <expr>`, validates charset, requires 'n' and operators
+- `_parse_oeis_formula_text(seq_id, text, parser)`: Extracts `a(n) = <expr>`, validates charset, requires 'n' and operators; extracts domain restrictions
+- `_extract_lower_bound(op, value)`: Converts `>` / `>=` operator and value to inclusive lower bound
 - `load_offsets(path)`: Returns `Dict[str, int]` mapping sequence IDs to primary offset
 - `load_stripped_terms(path, target_ids, max_terms)`: Returns `Dict[str, List[int]]` of sequence terms
+
+**OEIS Formula Domain Restriction Parsing**:
+- Extracts lower bounds from prefix patterns: `for n>=5, a(n) = ...` or `for n>0:`
+- Extracts lower bounds from suffix patterns: `a(n) = ... for n >= 2`
+- Converts `>` to inclusive bound: `n > 0` becomes `lower_bound = 1`
+- Rejects compound conditions: `for n > 0 and even`, `for n >= 1 and odd`
+- Rejects modular/parity restrictions: `for n mod 6 = 0`, `for n even`
+- Rejects conditional prefixes: `if`, `for squarefree n`, `for n=4m+1`
+- Rejects table/column/row/diagonal formulas
+- Rejects relational formulas: `3*a(n) = ...`, `A352757(n) - a(n) = ...`
+- Strips trailing domain text and initial conditions from expression before parsing
 
 **OEIS Formula Parsing Restrictions**:
 - Charset limited to basic operations to prevent misparsing complex formulas
 - Must contain variable `n`
 - Must include at least one operator
 - High-degree polynomials filtered to avoid unreliable cases
+- Formulas with `(-1)^n` rejected (parity-alternating, not simple polynomials)
+- Formulas preceded by `Empirical:` rejected
 
 These restrictions keep coverage focused on formulas that can be reliably validated with the current parser implementation.
 
@@ -278,28 +292,22 @@ These restrictions keep coverage focused on formulas that can be reliably valida
 
 **Purpose**: Validate that parsed formulas produce correct sequence terms.
 
-**Test Method**: `test_parse_and_evaluate_simple_polynomials`
+**Test Method**: `test_parse_and_evaluate_formulas`
 
 **Workflow**:
 1. Parse LODA formulas from `data/formulas-loda.txt`
 2. Parse OEIS formulas from `data/formulas-oeis.txt`
 3. Load offsets from `data/offsets`
-4. Load sequence terms from `data/stripped`
-5. For each formula with available terms:
-   - Evaluate at positions: `offset + 0, offset + 1, offset + 2, ...`
+4. Compute `max_terms` needed based on domain-restricted formulas' lower bounds
+5. Load sequence terms from `data/stripped`
+6. For each formula with available terms:
+   - Compute effective lower bound: `formula.lower_bound` if set, otherwise sequence offset
+   - Skip terms below the formula's domain (`start_idx = max(0, lower_bound - offset)`)
+   - Evaluate at up to 5 positions within the valid domain
    - Compare with expected OEIS terms
    - Track mismatches
-6. Assert: `mismatches == 0` (strict validation)
-
-**Key Metrics**:
-- Parsed formulas count (LODA + OEIS)
-- Checked sequences count (those with available terms)
-- Total comparisons (sum of terms checked across all sequences)
-- Mismatch count (target: 0)
-
-**Success Criteria**:
-- Zero mismatches in validation
-- Maximized formula coverage within parser capabilities
+7. Assert: `mismatches == 0` (strict validation)
+8. Assert: all supported functions exercised by at least one formula
 
 **Debug Output**:
 ```python
@@ -308,6 +316,10 @@ print(f"Parsed LODA: {loda_count}; Parsed OEIS: {oeis_count}")
 print(f"Checked sequences: {len(checked)}; LODA: {loda_checked}; OEIS: {oeis_checked}")
 print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
 ```
+
+**Success Criteria**:
+- Zero mismatches in validation
+- Maximized formula coverage within parser capabilities
 
 ## Offset Handling Details
 
@@ -319,7 +331,9 @@ print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
 
 **Validation Strategy**:
 - Use OEIS offset as the ground truth
+- For domain-restricted formulas, use `formula.lower_bound` as effective start
 - Evaluate formula at positions: `n = offset + idx` for each term at index `idx`
+- Skip terms where `n < lower_bound` (formula is not valid there)
 - Require exact match: `formula.evaluate(offset + idx) == terms[idx]`
 - No fallback shifts or offset corrections attempted
 
@@ -333,9 +347,13 @@ print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
    - Example: `floor((n-1)/2)` at offset 1 shifts by one position
    - Solution: Add to `DENYLIST_LODA`
 2. **Domain restrictions**: OEIS formula has special cases or constraints not in formula text
-   - Example: "for n > 0" but formula doesn't handle n=0
+   - Many domain restrictions (e.g., `for n >= 5`) are now parsed automatically and stored as `lower_bound`
+   - Remaining issues: compound conditions (`for n > 0 and even`), parity-specific sub-formulas
+   - Solution: Reject during parsing or add to `DENYLIST_OEIS`
+3. **OEIS data quality issues**: Formula text has typos, missing factors, or off-by-one errors
+   - Example: formula missing `/2`, or shifted by one index vs OEIS terms
    - Solution: Add to `DENYLIST_OEIS`
-3. **Parsing errors**: Formula text ambiguous or uses unsupported syntax
+4. **Parsing errors**: Formula text ambiguous or uses unsupported syntax
    - Solution: Improve parser or add to denylist if unresolvable
 
 ## Denylist Management
@@ -350,8 +368,8 @@ print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
 
 **DENYLIST_OEIS**:
 - Sequences where OEIS formula has validation issues
-- Reasons: offset mismatches, domain restrictions, parsing ambiguities
-- Examples: A001511, A004525, A006519
+- Reasons: off-by-one errors in formula text, missing factors/typos, parity-specific sub-formulas, ambiguous precedence
+- Examples: A007183 (off-by-one), A215543 (missing /2), A279112 (parity sub-formulas), A303295 (precedence)
 
 **When to Add to Denylist**:
 1. Formula parses successfully
@@ -363,10 +381,9 @@ print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
 **Denylist Format**:
 ```python
 DENYLIST_LODA: set[str] = {
-    # LODA formulas that assume offset 0 but OEIS offset is nonzero
-    "A044187",  # floor-based formula with offset 1
-    "A186704",  # floor((n-1)/2) assumes n starts at 0
-    # ...
+    # LODA formulas with offset or validation issues
+    "A093353",
+    "A283049",
 }
 ```
 
