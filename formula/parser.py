@@ -13,17 +13,33 @@ from formula.formula import (
 # Add comma to tokenizer to support multi-arg functions
 TOKEN_REGEX = re.compile(r"\s*(?:([a-zA-Z]+)|([0-9]+)|([nN])|([+\-])|(\*)|(/)|(\^)|(\()|(\))|(,))")
 
+ALL_FUNCTIONS = frozenset({"floor", "ceil", "binomial", "sqrtint", "gcd", "sumdigits"})
+
 
 class FormulaParser:
-    def parse_expression(self, seq_id: str, source: str, expr: str, lower_bound: Optional[int] = None) -> Optional[Formula]:
-        return self._build_formula(seq_id, source, expr, lower_bound)
+    def parse_expression(
+        self,
+        seq_id: str,
+        source: str,
+        expr: str,
+        lower_bound: Optional[int] = None,
+        allowed_functions: Optional[frozenset] = None,
+    ) -> Optional[Formula]:
+        return self._build_formula(seq_id, source, expr, lower_bound, allowed_functions)
 
-    def _build_formula(self, seq_id: str, source: str, expr: str, lower_bound: Optional[int] = None) -> Optional[Formula]:
+    def _build_formula(
+        self,
+        seq_id: str,
+        source: str,
+        expr: str,
+        lower_bound: Optional[int] = None,
+        allowed_functions: Optional[frozenset] = None,
+    ) -> Optional[Formula]:
         cleaned = self._sanitize_expression(expr)
         if cleaned is None:
             return None
         try:
-            node = _parse_expression(cleaned)
+            node = _parse_expression(cleaned, allowed_functions or ALL_FUNCTIONS)
         except ValueError:
             return None
         return Formula(sequence_id=seq_id, source=source, expression=cleaned, node=node, lower_bound=lower_bound)
@@ -43,7 +59,7 @@ class FormulaParser:
 Token = Tuple[str, Union[int, str]]
 
 
-def _tokenize(expr: str) -> List[Token]:
+def _tokenize(expr: str, allowed: frozenset) -> List[Token]:
     tokens: List[Token] = []
     pos = 0
     while pos < len(expr):
@@ -55,7 +71,7 @@ def _tokenize(expr: str) -> List[Token]:
             func_name = m.group(1).lower()
             if func_name == "n":
                 tokens.append(("VAR", "n"))
-            elif func_name in ("floor", "ceil", "binomial", "sqrtint", "gcd", "sumdigits"):
+            elif func_name in allowed:
                 tokens.append(("FUNC", func_name))
             else:
                 raise ValueError(f"Unsupported identifier: {func_name}")
@@ -154,9 +170,6 @@ class Parser:
             return VarNode()
         if kind == "FUNC":
             func_name = self.eat("FUNC")[1]
-            # Only allow supported functions
-            if func_name not in ("floor", "ceil", "binomial", "sqrtint", "gcd", "sumdigits"):
-                raise ValueError(f"Unsupported function: {func_name}")
             self.eat("LP")
             # Parse one or more arguments separated by commas
             args: List[object] = []
@@ -174,7 +187,7 @@ class Parser:
         raise ValueError("Expected primary")
 
 
-def _parse_expression(expr: str) -> object:
-    tokens = _tokenize(expr)
+def _parse_expression(expr: str, allowed: frozenset) -> object:
+    tokens = _tokenize(expr, allowed)
     parser = Parser(tokens)
     return parser.parse()

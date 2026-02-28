@@ -2,7 +2,10 @@ import re
 from typing import Dict, Iterator, List, Optional, Set
 
 from formula.formula import Formula
-from formula.parser import FormulaParser
+from formula.parser import FormulaParser, ALL_FUNCTIONS
+
+# Functions allowed in OEIS formulas (subset of ALL_FUNCTIONS)
+OEIS_ALLOWED_FUNCTIONS = frozenset({"binomial", "gcd"})
 
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
@@ -20,6 +23,27 @@ DENYLIST_OEIS: set[str] = {
     "A299256",   # parity-alternating formulas produce fractional results
     # Off-by-one domain in OEIS formula text
     "A303295",   # ((4n+7)*(4n+2))-(4n+2)*(4n+3)/2+4 for n>2 shifted by 1; correct for n>1
+    # Binomial formulas with fractional arguments (e.g., binomial(3*n/2, n)) — parser limitation
+    "A078531",   # binomial(3*n/2, n/2) only valid for even n
+    "A347854",   # binomial(3*n/2, n) only valid for even n
+    "A347855",   # binomial(4*n/3, n) only valid for n divisible by 3
+    "A347856",   # binomial(3*n/2, n) only valid for even n
+    "A347857",   # binomial(5*n/2, n) only valid for even n
+    "A347858",   # binomial(9*n/2, 4*n) only valid for even n
+    "A364517",   # binomial(9*n/2, 2*n) only valid for even n
+    # Binomial formulas with missing/incorrect domain restrictions
+    "A003600",   # binomial(n+2, n-1)+binomial(n, n-1) fails at offset 0; likely valid from n>=1
+    "A006470",   # binomial(n+2,2)*binomial(n+4,3)/2 fails at offset 1; likely needs higher start
+    "A027930",   # offset 4; off by 1 at n=8
+    "A056118",   # 11*binomial(n+5,5)-8*binomial(n+4,4) fails at offset 0; likely valid from n>=1
+    "A113127",   # negative binomial coefficients at offset 0; likely valid from n>=3
+    "A115144",   # binomial(2*n-6, n) fails at offset 0; likely valid from n>=4
+    "A172118",   # 12*binomial(n+3,4)-78*binomial(n+2,3)+19*binomial(n+1,2) fails at offset 1
+    "A227726",   # binomial(3*n, n)+binomial(3*n-1, n-1) fails at offset 0; likely valid from n>=1
+    "A289451",   # binomial(2*n,n)/(n+1)-(n-1)*n/2 fails at first term; domain issue
+    "A322595",   # 2*binomial(n+1,3)+6*binomial(n+1,2)+2*binomial(n+1,1)+1 mismatch at n=2
+    "A364515",   # (1/2)*binomial(...) produces non-integer at offset 0; likely valid from n>=1
+    "A381864",   # binomial polynomial gives 30 at offset 6 but expected 15; formula error or domain issue
 }
 
 DENYLIST_LODA: set[str] = {
@@ -168,6 +192,11 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     if re.search(r'\b(diagonal|column|row)\b', prefix):
         return None
 
+    # Reject formulas where a(n) is part of a larger expression
+    # (e.g., "Sum_{k=0..n} a(n) = ..." or "Product_{k=1..n} a(n) = ...")
+    if re.search(r'\}\s*$', prefix):
+        return None
+
     # Extract or reject trailing domain restrictions after the formula
     suffix = text[match.end():].lower()
 
@@ -205,8 +234,8 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     # Strip trailing domain restriction from expression (e.g., "n^2 + 1 for n >= 2")
     expr = re.sub(r'\s+for\s+n\s*>=?\s*\d+.*$', '', expr, flags=re.IGNORECASE).strip().rstrip(".;")
 
-    # Restrict OEIS parsing to simple polynomials with basic operations to avoid misparsing
-    if not re.fullmatch(r"[0-9nN\+\-\*\^\(\)/\s]+", expr):
+    # Restrict OEIS parsing to basic operations and whitelisted functions
+    if not re.fullmatch(r"[0-9nN\+\-\*\^\(\)/,\sa-zA-Z]+", expr):
         return None
     if "n" not in expr.lower():
         return None
@@ -215,7 +244,8 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
         return None
     if not any(op in expr for op in ["+", "*", "^"]):
         return None
-    return parser.parse_expression(seq_id, "oeis", expr, lower_bound=lower_bound)
+    return parser.parse_expression(seq_id, "oeis", expr, lower_bound=lower_bound,
+                                   allowed_functions=OEIS_ALLOWED_FUNCTIONS)
 
 
 def load_offsets(path: str) -> Dict[str, int]:

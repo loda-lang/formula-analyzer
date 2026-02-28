@@ -73,8 +73,9 @@ This is a Python tool that analyzes and compares mathematical formulas from OEIS
 
 ### `FormulaParser` (`formula/parser.py`)
 - Tokenizer and recursive descent parser for mathematical expressions
-- `parse_expression(seq_id, source, expr, lower_bound)` returns a `Formula` with evaluable AST or `None` on error
-- Whitelisted function support (floor, ceiling, binomial, etc.)
+- `parse_expression(seq_id, source, expr, lower_bound, allowed_functions)` returns a `Formula` with evaluable AST or `None` on error
+- `ALL_FUNCTIONS`: frozenset of all supported functions (default when `allowed_functions` is not specified)
+- `allowed_functions` parameter restricts which functions the tokenizer accepts; callers pass a subset (e.g., `OEIS_ALLOWED_FUNCTIONS`) to limit OEIS parsing
 
 ### `FormulaParser` (`formula/analyzer.py`)
 - File-level parser: reads and parses OEIS/LODA input files
@@ -242,7 +243,7 @@ if line.startswith('  ') and current_seq_id:
 
 **Key Design Decisions**:
 1. **Float division**: Division uses true division (not integer division) to support functions like ceiling correctly
-2. **Function whitelist**: Only explicitly supported functions are recognized; unknown identifiers raise errors during tokenization
+2. **Function whitelist via `allowed_functions`**: Only functions in the `allowed_functions` frozenset are recognized by the tokenizer; unknown identifiers raise errors. Defaults to `ALL_FUNCTIONS`; OEIS uses `OEIS_ALLOWED_FUNCTIONS` (a subset)
 3. **Case-insensitive variable**: Variable `n` handled case-insensitively
 4. **Parse-time validation**: Unsupported operations rejected during parsing (not just evaluation)
 
@@ -262,6 +263,9 @@ if line.startswith('  ') and current_seq_id:
 DENYLIST_OEIS: set[str]  # Sequences with offset/parsing issues
 DENYLIST_LODA: set[str]  # Sequences with offset mismatches
 ```
+
+**Constants**:
+- `OEIS_ALLOWED_FUNCTIONS`: frozenset of functions allowed in OEIS formulas (currently `binomial`, `gcd`); add new functions here when extending OEIS parsing
 
 **Regex Patterns**:
 - `LODA_LINE_RE`: Matches `A123456: a(n) = <expr>`
@@ -285,10 +289,12 @@ DENYLIST_LODA: set[str]  # Sequences with offset mismatches
 - Rejects conditional prefixes: `if`, `for squarefree n`, `for n=4m+1`
 - Rejects table/column/row/diagonal formulas
 - Rejects relational formulas: `3*a(n) = ...`, `A352757(n) - a(n) = ...`
+- Rejects formulas where `a(n) =` is inside a Sum/Product expression (prefix ends with `}`)
 - Strips trailing domain text and initial conditions from expression before parsing
 
 **OEIS Formula Parsing Restrictions**:
-- Charset limited to basic operations to prevent misparsing complex formulas
+- Charset allows digits, `n`, basic operators, parentheses, commas, and alphabetic characters
+- Function filtering delegated to the parser via `allowed_functions=OEIS_ALLOWED_FUNCTIONS`; the tokenizer rejects any identifier not in that set
 - Must contain variable `n`
 - Must include at least one operator
 - High-degree polynomials filtered to avoid unreliable cases
