@@ -24,8 +24,8 @@ DENYLIST_OEIS: set[str] = {
 
 DENYLIST_LODA: set[str] = {
     # LODA formulas with offset or validation issues
-    "A093353",
-    "A283049",
+    "A093353",   # n*floor(n/2) matches at n+1; OEIS offset 0 but LODA formula is shifted by 1
+    "A283049",   # 4*binomial(4*n+4,n-1) assumes offset 0 but OEIS offset is 1
 }
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)
