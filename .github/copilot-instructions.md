@@ -403,6 +403,60 @@ DENYLIST_LODA: set[str] = {
 - ✓ Easy to audit and update
 - ⚠ Requires manual curation when adding floor/ceil or other new operations
 
+## Validating OEIS Entries
+
+When a formula mismatch is detected, validate the OEIS entry to determine whether the error is in our local data or on the OEIS website.
+
+### Step 1: Fetch the Latest OEIS Data
+
+Use the text format for efficient, parseable output (avoids HTML noise):
+```
+https://oeis.org/search?q=id:A297740&fmt=text
+```
+This returns structured fields: `%S` (terms), `%F` (formulas), `%O` (offset), etc.
+
+Alternatively, fetch the HTML page at `https://oeis.org/A297740` for a human-readable view with formula attribution and dates.
+
+### Step 2: Cross-Check with Local Data
+
+Compare the OEIS website data against local files:
+- **Offset**: Compare `%O` field with `data/offsets` entry. If they differ, the local data is stale.
+- **Formula text**: Compare `%F` entries with `data/formulas-oeis.txt`. If the OEIS has a corrected formula (e.g., added `/2`, changed coefficients), the local data is stale.
+- **Terms**: Compare `%S`/`%T`/`%U` fields with `data/stripped`. Terms rarely change but verify if in doubt.
+
+### Step 3: Determine the Error Source
+
+**If local data is stale** (offset or formula differs from OEIS website):
+1. Refresh the sequence: `mcp_loda_refresh_sequence` with the sequence ID
+2. Wait for the updated data to propagate to local files
+3. Remove the sequence from the denylist
+4. Re-run tests to confirm the fix
+
+**If the OEIS formula is genuinely wrong** (website matches local data but formula doesn't match terms):
+1. Evaluate the formula at several positions using the documented offset
+2. Compare with the listed terms to confirm the mismatch pattern
+3. Identify the error type:
+   - **Off-by-one domain**: Formula gives `a(n+1)` instead of `a(n)`. Fix: shift domain bound by 1 or substitute `n-1` and re-expand.
+   - **Wrong constant/coefficient**: Formula is off by a fixed amount at every point. Fix: compute the correct constant from the terms.
+   - **Non-integer values**: Polynomial produces fractions for some n. Fix: check for missing denominators or wrong coefficients.
+   - **Notation ambiguity**: OEIS notation like `1/48*n^6` can be misread. This is a parser limitation, not always an OEIS error.
+4. Derive the corrected formula and verify it against terms
+5. Submit a correction to the OEIS (requires an OEIS account)
+6. Keep the sequence in the denylist until the correction is published and local data is refreshed
+
+### Submitting OEIS Corrections
+
+Go to `https://oeis.org/AXXXXXX`, click **edit**, update the formula line, and add an edit comment explaining:
+- What was wrong (e.g., "formula off by one index", "constant should be 1212 not 1222")
+- Evidence (e.g., "200*7 - 1222 = 178 but a(7) = 188")
+- The corrected formula with its valid domain
+
+### Common OEIS Error Patterns
+
+- **Off-by-one in domain bounds**: Most frequent error. The formula is mathematically correct but the stated domain `for n >= k` is off by 1. Often caused by the contributor using 1-based indexing while the sequence has offset 0, or vice versa.
+- **Typos in polynomial coefficients**: Wrong constant term, missing factor (e.g., `/2`), or swapped signs.
+- **Parity-specific formulas without markers**: Two sub-formulas for even/odd n presented as a single formula or with ambiguous `IF(MOD(...))` notation.
+
 ## Dependencies and Environment
 
 - Python 3.7+ (uses dataclasses, type hints)
