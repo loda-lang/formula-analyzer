@@ -99,3 +99,17 @@ a(n) = binomial(2*n - 6, n) - binomial(2*n - 6, n - 1).
 ```
 
 **Evidence**: The second binomial argument should be `n - 1`, not `n + 1`. The formula `C(2n-6,n) - C(2n-6,n+1)` fails at 12 of 14 tested positions (only n=3,4 match trivially since C(0,k)=0 for those). The correct subtraction form `C(2n-6,n) - C(2n-6,n-1)` is algebraically equivalent to Peter Bala's other correct formula `-5/(n-5)*C(2n-6,n)`, since `C(2n-6,n-1) = C(2n-6,n) * n/(n-5)`, giving `C(2n-6,n) * (1 - n/(n-5)) = -5/(n-5) * C(2n-6,n)`. Verified against all 14 terms. The LODA formula `-C(2n-6,n-1)+C(2n-6,n)` also uses the correct `n-1` form.
+
+## [A172118](https://oeis.org/A172118)
+
+**Current formula** (G. C. Greubel, Jan 23 2020):
+```
+a(n) = 12*binomial(n+3,4) - 78*binomial(n+2,3) + 19*binomial(n+1,2).
+```
+
+**Corrected formula**:
+```
+a(n) = 60*binomial(n+3,4) - 78*binomial(n+2,3) + 19*binomial(n+1,2).
+```
+
+**Evidence**: The leading coefficient should be 60, not 12. The sequence formula from the name is `a(n) = n*(n+1)*(5*n^2-n-3)/2`, which expands to `5n^4/2 + 2n^3 - 2n^2 - 3n/2`. Expressing this in the binomial basis `A*C(n+3,4) + B*C(n+2,3) + C*C(n+1,2)` and matching coefficients of n^4: `A/24 = 5/2` gives `A = 60`. The coefficients B = -78 and C = 19 are correct: n^3 gives `60*6/24 + B/6 = 2`, so `B = -78`; n^2 gives `60*11/24 + (-78)*3/6 + C/2 = -2`, so `C = 19`. Verified numerically against all 10 listed terms. Similar pattern to A056118 (also Greubel, coefficient -8 should be -10).
