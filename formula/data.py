@@ -8,18 +8,18 @@ from formula.parser import FormulaParser
 DENYLIST_OEIS: set[str] = {
     # Off-by-one offset issues in OEIS formula text
     "A007183",   # 3*n-27 for n>=23 is shifted by 1
-    "A228396",   # formula off by one index
+    "A228396",   # stale local offset (1,2); OEIS has 0,3; formula correct at offset 0; awaiting refresh
     "A258272",   # 200*n-1222 for n>=7 shifted by 1
     "A297740",   # 34*n^2+30*n+9 for n>=6 shifted by 1
     # OEIS formula typos / missing factors
     "A140228",   # n*(274+85*n+n^4)/60 produces non-integer values
-    "A215543",   # missing /2 in formula text
-    "A244501",   # formula doesn't match terms at stated domain
+    "A215543",   # stale local formula missing /2; OEIS corrected Aug 2025; awaiting refresh
+    "A244501",   # OEIS notation 1/48*n^6 parsed as (1/48)*n^6 instead of n^6/48
     # Parity-specific formulas lacking parity markers
     "A279112",   # even/odd sub-formulas after IF(MOD) conditional
     "A299256",   # parity-alternating formulas produce fractional results
-    # Ambiguous operator precedence in OEIS notation
-    "A303295",   # ((4n+7)(4n+2))-(4n+2)*(4n+3)/2+4 precedence issue
+    # Off-by-one domain in OEIS formula text
+    "A303295",   # ((4n+7)*(4n+2))-(4n+2)*(4n+3)/2+4 for n>2 shifted by 1; correct for n>1
 }
 
 DENYLIST_LODA: set[str] = {
