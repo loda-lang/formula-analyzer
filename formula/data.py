@@ -30,8 +30,8 @@ DENYLIST_OEIS: set[str] = {
     "A006470",   # binomial(n+2,2)*binomial(n+4,3)/2 computes a(n+1) not a(n); off-by-one in Zerinvary Lajos 2005 formula
     "A027930",   # Greubel formula has binomial(n-1,n-7) but should be binomial(n,n-7); typo n-1 instead of n
     "A056118",   # Greubel formula 11*C(n+5,5)-8*C(n+4,4) has wrong coefficient: -8 should be -10
-    "A113127",   # negative binomial coefficients at offset 0; likely valid from n>=3
-    "A115144",   # binomial(2*n-6, n) fails at offset 0; likely valid from n>=4
+    "A113127",   # parser limitation: generalized binomial gives non-zero C(0,-1), C(-1,-2), C(-2,-3); formula correct with standard C(a,b)=0 for b<0
+    "A115144",   # Bala formula C(2n-6,n)-C(2n-6,n+1) has typo: n+1 should be n-1; correct is C(2n-6,n)-C(2n-6,n-1) = -5/(n-5)*C(2n-6,n)
     "A172118",   # 12*binomial(n+3,4)-78*binomial(n+2,3)+19*binomial(n+1,2) fails at offset 1
     "A227726",   # binomial(3*n, n)+binomial(3*n-1, n-1) fails at offset 0; likely valid from n>=1
     "A289451",   # binomial(2*n,n)/(n+1)-(n-1)*n/2 fails at first term; domain issue

@@ -85,3 +85,17 @@ a(n) = 11*binomial(n+5,5) - 10*binomial(n+4,4).
 ```
 
 **Evidence**: The coefficient of `C(n+4,4)` should be -10, not -8. Algebraically: `11*C(n+5,5) - 8*C(n+4,4)` expands to `(n+1)(n+2)(n+3)(n+4)(11n+15)/120`, but the correct formula `(11n+5)*C(n+4,4)/5` expands to `(n+1)(n+2)(n+3)(n+4)(11n+5)/120`. The factor `(11n+15)` vs `(11n+5)` shows a constant error of 10. Solving `A(n+5) + 5B = 11n + 5` with `A = 11` gives `B = -10`. The difference `f_wrong(n) - a(n) = (n+1)(n+2)(n+3)(n+4)/12` matches at every n. The Mathematica code `Table[11*Binomial[n+5,5]-8*Binomial[n+4,4], {n,0,40}]` by the same author would also produce wrong values. The other formulas and code (Maple, PARI, Magma, SageMath, GAP) all use the correct `(11n+5)*C(n+4,4)/5` form.
+
+## [A115144](https://oeis.org/A115144)
+
+**Current formula** (Peter Bala, Mar 05 2023):
+```
+a(n) = binomial(2*n - 6, n) - binomial(2*n - 6, n + 1).
+```
+
+**Corrected formula**:
+```
+a(n) = binomial(2*n - 6, n) - binomial(2*n - 6, n - 1).
+```
+
+**Evidence**: The second binomial argument should be `n - 1`, not `n + 1`. The formula `C(2n-6,n) - C(2n-6,n+1)` fails at 12 of 14 tested positions (only n=3,4 match trivially since C(0,k)=0 for those). The correct subtraction form `C(2n-6,n) - C(2n-6,n-1)` is algebraically equivalent to Peter Bala's other correct formula `-5/(n-5)*C(2n-6,n)`, since `C(2n-6,n-1) = C(2n-6,n) * n/(n-5)`, giving `C(2n-6,n) * (1 - n/(n-5)) = -5/(n-5) * C(2n-6,n)`. Verified against all 14 terms. The LODA formula `-C(2n-6,n-1)+C(2n-6,n)` also uses the correct `n-1` form.
