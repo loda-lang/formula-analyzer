@@ -29,7 +29,7 @@ DENYLIST_OEIS: set[str] = {
     "A003600",   # binomial(n+2,n-1)+binomial(n,n-1) gives 0 at n=0 (k=-1); valid from n>=1; OEIS missing domain
     "A006470",   # binomial(n+2,2)*binomial(n+4,3)/2 computes a(n+1) not a(n); off-by-one in Zerinvary Lajos 2005 formula
     "A027930",   # Greubel formula has binomial(n-1,n-7) but should be binomial(n,n-7); typo n-1 instead of n
-    "A056118",   # 11*binomial(n+5,5)-8*binomial(n+4,4) fails at offset 0; likely valid from n>=1
+    "A056118",   # Greubel formula 11*C(n+5,5)-8*C(n+4,4) has wrong coefficient: -8 should be -10
     "A113127",   # negative binomial coefficients at offset 0; likely valid from n>=3
     "A115144",   # binomial(2*n-6, n) fails at offset 0; likely valid from n>=4
     "A172118",   # 12*binomial(n+3,4)-78*binomial(n+2,3)+19*binomial(n+1,2) fails at offset 1
