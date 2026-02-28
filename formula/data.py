@@ -7,10 +7,10 @@ from formula.parser import FormulaParser
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
     # Off-by-one offset issues in OEIS formula text
-    "A007183",   # 3*n-27 for n>=23 is shifted by 1
+    "A007183",   # 3*n-27 for n>=23 is shifted by 1; OEIS correction submitted 2026-02-28
     "A228396",   # stale local offset (1,2); OEIS has 0,3; formula correct at offset 0; awaiting refresh
-    "A258272",   # 200*n-1222 for n>=7 shifted by 1
-    "A297740",   # 34*n^2+30*n+9 for n>=6 shifted by 1
+    "A258272",   # 200*n-1222 for n>=7 shifted by 1; OEIS correction submitted 2026-02-28
+    "A297740",   # 34*n^2+30*n+9 for n>=6 shifted by 1; OEIS correction submitted 2026-02-28
     # OEIS formula typos / missing factors
     "A140228",   # n*(274+85*n+n^4)/60 produces non-integer values
     "A215543",   # stale local formula missing /2; OEIS corrected Aug 2025; awaiting refresh
@@ -23,9 +23,9 @@ DENYLIST_OEIS: set[str] = {
 }
 
 DENYLIST_LODA: set[str] = {
-    # LODA formulas with offset or validation issues
-    "A093353",   # n*floor(n/2) matches at n+1; OEIS offset 0 but LODA formula is shifted by 1
-    "A283049",   # 4*binomial(4*n+4,n-1) assumes offset 0 but OEIS offset is 1
+    # LODA formulas with incorrect offset in LODA program
+    "A093353",   # LODA #offset 1 but OEIS offset 0; program removal triggered 2026-02-28
+    "A283049",   # LODA no #offset (default 0) but OEIS offset 1; program removal triggered 2026-02-28
 }
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)
