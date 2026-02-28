@@ -41,3 +41,33 @@ a(n) = (n^6 - 27*n^4 + 52*n^3 + 125*n^2 - 388*n + 189)/48 for odd n >= 1.
 **Corrected formula**: `a(n) = binomial(n+2, n-1) + binomial(n, n-1) for n >= 1.`
 
 **Evidence**: At n=0, both binomial arguments have k = n-1 = -1 (negative), giving binomial(2,-1) + binomial(0,-1) = 0 + 0 = 0, but a(0) = 1. For all n >= 1 the formula is correct: n=1 gives 1+1=2, n=2 gives 4+2=6, n=3 gives 10+3=13, etc. The sequence name itself already notes `(n^3 + 3*n^2 + 8*n)/6 (n > 0)` and the PARI code uses `if(n, ..., 1)`, both acknowledging a(0) is a special case.
+
+## A006470 — [OEIS](https://oeis.org/A006470)
+
+**Current formula** (Zerinvary Lajos, Dec 14 2005):
+```
+a(n) = binomial(n+2, 2)*binomial(n+4, 3)/2;
+a(n) = n*(n+1)^2*(n+2)*(n+3)/24. (End)
+```
+
+**Corrected formula**:
+```
+a(n) = binomial(n+1, 2)*binomial(n+3, 3)/2;
+a(n) = n*(n+1)^2*(n+2)*(n+3)/24. (End)
+```
+
+**Evidence**: The binomial formula `C(n+2,2)*C(n+4,3)/2` computes `a(n+1)` instead of `a(n)`. Algebraically: `C(n+2,2)*C(n+4,3)/2 = (n+1)(n+2)^2(n+3)(n+4)/24`, while `a(n) = n(n+1)^2(n+2)(n+3)/24`. At n=1: formula gives 15 but a(1)=2; at n=2: formula gives 60 but a(2)=15. The corrected version `C(n+1,2)*C(n+3,3)/2` matches all terms. The polynomial formula in the same block is correct. Only the first line of the (Start)/(End) block needs correction.
+
+## A027930 — [OEIS](https://oeis.org/A027930)
+
+**Current formula** (G. C. Greubel, Sep 06 2019):
+```
+a(n) = binomial(n-1, n-7) + (n-3)*((n-3)^4 + 15*(n-3)^2 + 104)/120.
+```
+
+**Corrected formula**:
+```
+a(n) = binomial(n, n-7) + (n-3)*((n-3)^4 + 15*(n-3)^2 + 104)/120.
+```
+
+**Evidence**: The binomial term should be `C(n, n-7) = C(n, 7)`, not `C(n-1, n-7) = C(n-1, 6)`. The error difference equals `C(n,7) - C(n-1,6)` exactly: at n=8 diff=1 (`C(8,7)-C(7,6)=8-7`), at n=9 diff=8 (`C(9,7)-C(8,6)=36-28`), at n=10 diff=36, etc. The polynomial part `(n-3)*((n-3)^4+15*(n-3)^2+104)/120` is correct. The PARI code in the same entry uses `binomial(n+3, n-4)` with PARI's n starting at 1 (= OEIS n-3), which correctly evaluates to `C(OEIS_n, 7)`. The Smiley (2001) and Zerinvary (2007) formulas and the Magma/SageMath/GAP code are all correct — only the formula text has a typo (`n-1` instead of `n`).

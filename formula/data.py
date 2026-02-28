@@ -27,8 +27,8 @@ DENYLIST_OEIS: set[str] = {
     "A364517",   # binomial(9*n/2, 2*n) loses precision at n>=3 due to large gamma values
     # Binomial formulas with missing/incorrect domain restrictions
     "A003600",   # binomial(n+2,n-1)+binomial(n,n-1) gives 0 at n=0 (k=-1); valid from n>=1; OEIS missing domain
-    "A006470",   # binomial(n+2,2)*binomial(n+4,3)/2 fails at offset 1; likely needs higher start
-    "A027930",   # offset 4; off by 1 at n=8
+    "A006470",   # binomial(n+2,2)*binomial(n+4,3)/2 computes a(n+1) not a(n); off-by-one in Zerinvary Lajos 2005 formula
+    "A027930",   # Greubel formula has binomial(n-1,n-7) but should be binomial(n,n-7); typo n-1 instead of n
     "A056118",   # 11*binomial(n+5,5)-8*binomial(n+4,4) fails at offset 0; likely valid from n>=1
     "A113127",   # negative binomial coefficients at offset 0; likely valid from n>=3
     "A115144",   # binomial(2*n-6, n) fails at offset 0; likely valid from n>=4
