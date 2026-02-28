@@ -56,18 +56,28 @@ This is a Python tool that analyzes and compares mathematical formulas from OEIS
 - Defines all recognized formula categories
 - Add new types here when extending classification
 
-### `Formula` (dataclass)
-- Immutable representation of a single formula
+### `Formula` (dataclass in `formula/analyzer.py`)
+- Immutable representation of a classified formula
 - Fields: `sequence_id`, `text`, `source`, `types`
 - Implement `__hash__` for set operations
+
+### `Formula` (dataclass in `formula/formula.py`)
+- Parsed formula with evaluable AST
+- Fields: `sequence_id`, `source`, `expression`, `node`, `lower_bound`
+- `evaluate(n)` computes the formula value at a given n
 
 ### `FormulaClassifier`
 - Pattern-based classification using regex
 - `PATTERNS` dict maps types to regex lists
 - `classify_oeis()` and `classify_loda()` methods handle different syntaxes
 
-### `FormulaParser`
-- Reads and parses input files
+### `FormulaParser` (`formula/parser.py`)
+- Tokenizer and recursive descent parser for mathematical expressions
+- `parse_expression(seq_id, source, expr, lower_bound)` returns a `Formula` with evaluable AST or `None` on error
+- Whitelisted function support (floor, ceiling, binomial, etc.)
+
+### `FormulaParser` (`formula/analyzer.py`)
+- File-level parser: reads and parses OEIS/LODA input files
 - Handles multi-line OEIS entries (indentation-based)
 - One formula per line for LODA
 - Uses `defaultdict(list)` for OEIS to accumulate multiple formulas
@@ -156,8 +166,8 @@ if line.startswith('  ') and current_seq_id:
 - `data/formulas-oeis.txt`: Multi-line entries with 2-space indent for continuation
 - `data/formulas-loda.txt`: Single line per sequence
 - `data/names`: Format `A123456 Sequence name description`
-- `data/stripped`: OEIS sequence terms ("stripped" export). Begins with comment lines `# ...`; each sequence line is `Axxxxxx ,t0,t1,t2,...` (comma-separated terms; long lines may wrap). Not yet used; reserved for future term-based validation.
-- `data/offsets`: OEIS offsets table. One line per sequence: `Axxxxxx: n0,k` where `n0` is the primary offset (index of first listed term) and `k` is the secondary offset (position of the first term with |a(n)| > 1). Secondary may be omitted; negative or large offsets are possible. Use `n0` for index normalization; `k` is mainly informational/sorting.
+- `data/stripped`: OEIS sequence terms ("stripped" export). Begins with comment lines `# ...`; each sequence line is `Axxxxxx ,t0,t1,t2,...` (comma-separated terms; long lines may wrap). Used by `load_stripped_terms()` for formula validation against known terms.
+- `data/offsets`: OEIS offsets table. Format `Axxxxxx: n0,k` — see [Offset Handling Details](#offset-handling-details) for full documentation.
 
 ### Output Files
 - `results/interesting_formulas.txt`: Human-readable report
@@ -207,11 +217,9 @@ if line.startswith('  ') and current_seq_id:
 - When present, infer both `floor_ceiling` and `explicit_closed`; LODA variants are not novel unless adding a truly different type
 
 ### Offsets (OEIS)
-- Primary offset (first number) gives the index of the first listed term; use it to align OEIS terms with LODA's `n >= 0` convention and to normalize formulas like `a(n+1)` vs `a(n)`.
-- Secondary offset (second number) is auto-assigned; it is 1-indexed and marks the first term with |a(n)| > 1. It may be omitted; keep it as optional metadata, not as an index shift.
-- Common values: 0 for functions on nonnegative integers, 1 for “numbers such that …” lists. Negative or large offsets exist (e.g., constants, huge-start sequences). For arrays/triangles, offset is the first row index.
-- Parsing: split `Axxxxxx: n0,k`; `k` may be missing; allow negatives and large integers; skip malformed lines.
-- Usage in comparator/parity checks: adjust indexing with `n0`; avoid treating novelty that is purely an offset shift as interesting; do not penalize based on `k` aside from lexicographic/sorting needs.
+- See [Offset Handling Details](#offset-handling-details) for full documentation.
+- Primary offset gives the index of the first listed term (e.g., 0 or 1).
+- Use it to align OEIS terms with formula evaluation and LODA's conventions.
 
 ## Formula Parser Implementation
 
@@ -326,8 +334,11 @@ print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
 **The Offset Problem**:
 - OEIS sequences have varying starting indices (offset)
 - Common offsets: 0 (functions on non-negative integers), 1 ("numbers such that"), sometimes negative or large
+- For arrays/triangles, offset is the first row index
 - LODA exports generally follow OEIS offsets, but some formulas contain incorrect or outdated offset information (often assuming n starts at 0); those should be ignored/denylisted
 - Formulas like `a(n) = floor((n-1)/2)` may be written for offset 0 but OEIS uses offset 1
+
+**Offset Format**: `Axxxxxx: n0,k` where `n0` is the primary offset and `k` (optional) is the 1-indexed position of the first term with |a(n)| > 1. Only `n0` is used for validation; `k` is informational.
 
 **Validation Strategy**:
 - Use OEIS offset as the ground truth
@@ -343,18 +354,18 @@ print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
 - Forces correct formula representation
 
 **When Formulas Fail Validation**:
-1. **Offset mismatch**: LODA formula uses different n convention than OEIS
+1. **Stale local data**: Offset or formula text differs from the OEIS website
+   - Solution: Refresh via `mcp_loda_refresh_sequence`; add to denylist with refresh date in comment. Remove from denylist once updated data is available locally (can take multiple days).
+2. **Offset mismatch**: LODA formula uses different n convention than OEIS
    - Example: `floor((n-1)/2)` at offset 1 shifts by one position
    - Solution: Add to `DENYLIST_LODA`
-2. **Domain restrictions**: OEIS formula has special cases or constraints not in formula text
-   - Many domain restrictions (e.g., `for n >= 5`) are now parsed automatically and stored as `lower_bound`
-   - Remaining issues: compound conditions (`for n > 0 and even`), parity-specific sub-formulas
-   - Solution: Reject during parsing or add to `DENYLIST_OEIS`
-3. **OEIS data quality issues**: Formula text has typos, missing factors, or off-by-one errors
-   - Example: formula missing `/2`, or shifted by one index vs OEIS terms
+3. **OEIS formula errors**: Formula text has typos, wrong domain bounds, missing factors, or off-by-one errors
+   - Example: formula missing `/2`, or domain `for n >= k` off by 1
+   - Solution: Submit a correction to OEIS; add to `DENYLIST_OEIS` until corrected and refreshed
+4. **Parity-specific formulas**: Two sub-formulas for even/odd n not distinguishable by parser
    - Solution: Add to `DENYLIST_OEIS`
-4. **Parsing errors**: Formula text ambiguous or uses unsupported syntax
-   - Solution: Improve parser or add to denylist if unresolvable
+5. **Notation ambiguity**: OEIS notation like `1/48*n^6` misinterpreted by parser
+   - Solution: Add to `DENYLIST_OEIS` (parser limitation)
 
 ## Denylist Management
 
@@ -363,30 +374,19 @@ print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
 **DENYLIST_LODA**:
 - Sequences where LODA formula assumes offset 0 or embeds outdated/incorrect offset info while OEIS offset ≠ 0
 - Added when validation produces mismatch due to index shift
-- Examples with floor/ceil: A186704, A385730, A386858, A389928
-- Examples with other operations: A044187, A156772, A157105
 
 **DENYLIST_OEIS**:
 - Sequences where OEIS formula has validation issues
 - Reasons: off-by-one errors in formula text, missing factors/typos, parity-specific sub-formulas, ambiguous precedence
-- Examples: A007183 (off-by-one), A215543 (missing /2), A279112 (parity sub-formulas), A303295 (precedence)
 
 **When to Add to Denylist**:
 1. Formula parses successfully
 2. Evaluation produces values
 3. Values don't match OEIS terms at documented offset
 4. Manual inspection confirms offset issue or formula limitation
-5. If the local offset or formula data doesn't match the data on the OEIS website, refresh the sequence using the LODA MCP server (`mcp_loda_refresh_sequence`), wait for the updated data, and then remove the sequence from the denylist — do NOT add it
-6. Otherwise (genuine formula error), add sequence ID to appropriate denylist with comment
-
-**Denylist Format**:
-```python
-DENYLIST_LODA: set[str] = {
-    # LODA formulas with offset or validation issues
-    "A093353",
-    "A283049",
-}
-```
+5. If the local offset or formula data doesn't match the data on the OEIS website, refresh the sequence using the LODA MCP server (`mcp_loda_refresh_sequence`) and add it to the denylist with a comment noting the refresh date (e.g., `"A228396",  # stale local offset; refresh triggered 2026-02-28`). It can take multiple days until the updated data is available locally, so do NOT expect to remove the entry immediately.
+6. Once refreshed data has propagated (verify by checking local files), remove the sequence from the denylist and re-run tests.
+7. Otherwise (genuine formula error), add sequence ID to appropriate denylist with comment
 
 **Alternatives Considered**:
 - **Automatic offset correction**: Try formula at offset ±1, ±2 until match found
@@ -428,8 +428,8 @@ Compare the OEIS website data against local files:
 
 **If local data is stale** (offset or formula differs from OEIS website):
 1. Refresh the sequence: `mcp_loda_refresh_sequence` with the sequence ID
-2. Wait for the updated data to propagate to local files
-3. Remove the sequence from the denylist
+2. Add to the denylist with a comment noting the refresh date (it can take multiple days for the updated data to propagate to local files)
+3. Once updated data is available locally (verify by checking local files), remove the sequence from the denylist
 4. Re-run tests to confirm the fix
 
 **If the OEIS formula is genuinely wrong** (website matches local data but formula doesn't match terms):
