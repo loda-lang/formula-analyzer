@@ -33,6 +33,17 @@ class FuncNode:
         self.args = args
 
 
+def _is_int(value) -> bool:
+    """Check whether a value is an integer (or integer-valued float/Fraction)."""
+    if isinstance(value, int):
+        return True
+    if isinstance(value, float):
+        return value.is_integer()
+    if isinstance(value, Fraction):
+        return value.denominator == 1
+    return False
+
+
 def _check_arg_count(func_name: str, arg_vals: List, expected: int) -> None:
     """Check if function has the expected number of arguments."""
     if len(arg_vals) != expected:
@@ -40,13 +51,34 @@ def _check_arg_count(func_name: str, arg_vals: List, expected: int) -> None:
         raise ValueError(f"{func_name}() expects {expected} argument{plural}")
 
 
-def _binomial(n_arg: int, k_arg: int) -> int:
+def _binomial(n_arg, k_arg):
     """
-    Generalized binomial coefficient.
+    Generalized binomial coefficient supporting both integer and non-integer arguments.
     
-    Follows the rules from https://arxiv.org/pdf/1105.3689.pdf
-    and mirrors the C++ reference implementation.
+    For integer arguments: follows the rules from https://arxiv.org/pdf/1105.3689.pdf
+    and mirrors the C++ reference implementation (supports negative n and k).
+    
+    For non-integer arguments: uses the gamma function definition
+    binomial(a, b) = Gamma(a+1) / (Gamma(b+1) * Gamma(a-b+1)).
     """
+    if n_arg == math.inf or k_arg == math.inf:
+        return math.inf
+
+    if _is_int(n_arg) and _is_int(k_arg):
+        return _binomial_int(int(n_arg), int(k_arg))
+
+    # Non-integer path: use gamma function
+    # binomial(a, b) = Gamma(a+1) / (Gamma(b+1) * Gamma(a-b+1))
+    a = float(n_arg)
+    b = float(k_arg)
+    try:
+        return math.gamma(a + 1) / (math.gamma(b + 1) * math.gamma(a - b + 1))
+    except (ValueError, OverflowError, ZeroDivisionError):
+        raise ValueError(f"binomial({n_arg}, {k_arg}) undefined")
+
+
+def _binomial_int(n_arg: int, k_arg: int) -> int:
+    """Integer binomial coefficient with support for negative arguments."""
     if n_arg == math.inf or k_arg == math.inf:
         return math.inf
 
@@ -106,14 +138,8 @@ def _sumdigits(x: int, base: int = 10) -> int:
 
 def _to_int(value: Union[int, float, Fraction]) -> int:
     """Convert a value to integer, raising error if not an integer."""
-    if isinstance(value, Fraction):
-        if value.denominator != 1:
-            raise ValueError("Expected integer argument")
-        return int(value.numerator)
-    if isinstance(value, float):
-        if not value.is_integer():
-            raise ValueError("Expected integer argument")
-        return int(value)
+    if not _is_int(value):
+        raise ValueError("Expected integer argument")
     return int(value)
 
 
@@ -136,9 +162,7 @@ def eval_node(node: object, n: int) -> int:
             return math.ceil(arg_vals[0])
         if node.name == "binomial":
             _check_arg_count("binomial", arg_vals, 2)
-            n_arg = _to_int(arg_vals[0])
-            k_arg = _to_int(arg_vals[1])
-            return _binomial(n_arg, k_arg)
+            return _binomial(arg_vals[0], arg_vals[1])
         if node.name == "sqrtint":
             _check_arg_count("sqrtint", arg_vals, 1)
             return math.isqrt(_to_int(arg_vals[0]))
@@ -164,6 +188,8 @@ def eval_node(node: object, n: int) -> int:
         if node.op == "/":
             if right == 0:
                 raise ValueError("Division by zero")
+            if isinstance(left, float) or isinstance(right, float):
+                return float(left) / float(right)
             return Fraction(left, right)
         if node.op == "^":
             return int(pow(left, right))

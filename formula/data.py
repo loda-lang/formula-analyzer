@@ -23,14 +23,8 @@ DENYLIST_OEIS: set[str] = {
     "A299256",   # parity-alternating formulas produce fractional results
     # Off-by-one domain in OEIS formula text
     "A303295",   # ((4n+7)*(4n+2))-(4n+2)*(4n+3)/2+4 for n>2 shifted by 1; correct for n>1
-    # Binomial formulas with fractional arguments (e.g., binomial(3*n/2, n)) — parser limitation
-    "A078531",   # binomial(3*n/2, n/2) only valid for even n
-    "A347854",   # binomial(3*n/2, n) only valid for even n
-    "A347855",   # binomial(4*n/3, n) only valid for n divisible by 3
-    "A347856",   # binomial(3*n/2, n) only valid for even n
-    "A347857",   # binomial(5*n/2, n) only valid for even n
-    "A347858",   # binomial(9*n/2, 4*n) only valid for even n
-    "A364517",   # binomial(9*n/2, 2*n) only valid for even n
+    # Binomial formulas with fractional arguments and large gamma values — float precision issue
+    "A364517",   # binomial(9*n/2, 2*n) loses precision at n>=3 due to large gamma values
     # Binomial formulas with missing/incorrect domain restrictions
     "A003600",   # binomial(n+2, n-1)+binomial(n, n-1) fails at offset 0; likely valid from n>=1
     "A006470",   # binomial(n+2,2)*binomial(n+4,3)/2 fails at offset 1; likely needs higher start
