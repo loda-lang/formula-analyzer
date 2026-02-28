@@ -10,9 +10,9 @@ OEIS_ALLOWED_FUNCTIONS = frozenset({"binomial", "gcd"})
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
     # Off-by-one offset issues in OEIS formula text
-    "A007183",   # 3*n-27 for n>=23 is shifted by 1; OEIS correction submitted 2026-02-28
-    "A228396",   # stale local offset (1,2); OEIS has 0,3; formula correct at offset 0; awaiting refresh
-    "A258272",   # 200*n-1222 for n>=7 shifted by 1; OEIS correction submitted 2026-02-28
+    "A007183",   # stale local formula; OEIS corrected to 3*n-24 for n>=22; refresh triggered 2026-02-28
+    "A228396",   # stale local offset (1,2); OEIS has 0,3; formula correct at offset 0; refresh triggered 2026-02-28
+    "A258272",   # stale local formula; OEIS corrected to 200*n-1212 for n>=7; refresh triggered 2026-02-28
     "A297740",   # 34*n^2+30*n+9 for n>=6 shifted by 1; OEIS correction submitted 2026-02-28
     # OEIS formula typos / missing factors
     "A140228",   # n*(274+85*n+n^4)/60 produces non-integer values
