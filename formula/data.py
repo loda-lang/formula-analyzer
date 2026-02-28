@@ -26,7 +26,7 @@ DENYLIST_OEIS: set[str] = {
     # Binomial formulas with fractional arguments and large gamma values — float precision issue
     "A364517",   # binomial(9*n/2, 2*n) loses precision at n>=3 due to large gamma values
     # Binomial formulas with missing/incorrect domain restrictions
-    "A003600",   # binomial(n+2, n-1)+binomial(n, n-1) fails at offset 0; likely valid from n>=1
+    "A003600",   # binomial(n+2,n-1)+binomial(n,n-1) gives 0 at n=0 (k=-1); valid from n>=1; OEIS missing domain
     "A006470",   # binomial(n+2,2)*binomial(n+4,3)/2 fails at offset 1; likely needs higher start
     "A027930",   # offset 4; off by 1 at n=8
     "A056118",   # 11*binomial(n+5,5)-8*binomial(n+4,4) fails at offset 0; likely valid from n>=1
