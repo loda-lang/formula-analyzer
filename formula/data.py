@@ -15,20 +15,20 @@ DENYLIST_OEIS: set[str] = {
     "A258272",   # stale local formula; OEIS corrected to 200*n-1212 for n>=7; refresh triggered 2026-02-28
     "A297740",   # 34*n^2+30*n+9 for n>=6 shifted by 1; OEIS correction submitted 2026-02-28
     # OEIS formula typos / missing factors
-    "A140228",   # n*(274+85*n+n^4)/60 produces non-integer values
+    "A140228",   # n*(274+85*n+n^4)/60 has typo: 85*n should be 85*n^2 (Maple code is correct)
     "A215543",   # stale local formula missing /2; OEIS corrected Aug 2025; awaiting refresh
     "A244501",   # OEIS notation 1/48*n^6 parsed as (1/48)*n^6 instead of n^6/48
     # Parity-specific formulas lacking parity markers
     "A279112",   # sub-formulas missing parity markers: should be "for n>=2 and n even" / "for n>=1 and n odd"; OEIS correction submitted 2026-02-28
     "A299256",   # parity-alternating formulas produce fractional results
     # Off-by-one domain in OEIS formula text
-    "A303295",   # ((4n+7)*(4n+2))-(4n+2)*(4n+3)/2+4 computes a(n+1) not a(n); OEIS correction submitted 2026-02-28
+    "A303295",   # correction published 2026-02-28; refresh triggered 2026-03-01; awaiting local data update
     # Binomial formulas with fractional arguments and large gamma values — float precision issue
     "A364517",   # binomial(9*n/2, 2*n) loses precision at n>=3 due to large gamma values
     # Binomial formulas with missing/incorrect domain restrictions
     "A003600",   # binomial(n+2,n-1)+binomial(n,n-1) gives 0 at n=0 (k=-1); valid from n>=1; OEIS correction submitted 2026-02-28
-    "A006470",   # binomial(n+2,2)*binomial(n+4,3)/2 computes a(n+1) not a(n); off-by-one in Zerinvary Lajos 2005 formula
-    "A027930",   # Greubel formula has binomial(n-1,n-7) but should be binomial(n,n-7); typo n-1 instead of n
+    "A006470",   # binomial(n+2,2)*binomial(n+4,3)/2 computes a(n+1) not a(n); correction submitted by Zhuorui He 2026-02-28
+    "A027930",   # Greubel formula has binomial(n-1,n-7) but should be binomial(n,n-7); OEIS correction submitted 2026-03-01
     "A056118",   # Greubel formula 11*C(n+5,5)-8*C(n+4,4) has wrong coefficient: -8 should be -10
     "A113127",   # parser limitation: generalized binomial gives non-zero C(0,-1), C(-1,-2), C(-2,-3); formula correct with standard C(a,b)=0 for b<0
     "A115144",   # Bala formula C(2n-6,n)-C(2n-6,n+1) has typo: n+1 should be n-1; correct is C(2n-6,n)-C(2n-6,n-1) = -5/(n-5)*C(2n-6,n)
