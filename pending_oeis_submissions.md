@@ -86,6 +86,8 @@ a(n) = binomial(2*n - 6, n) - binomial(2*n - 6, n - 1).
 
 **Evidence**: The second binomial argument should be `n - 1`, not `n + 1`. The formula `C(2n-6,n) - C(2n-6,n+1)` fails at 12 of 14 tested positions (only n=3,4 match trivially since C(0,k)=0 for those). The correct subtraction form `C(2n-6,n) - C(2n-6,n-1)` is algebraically equivalent to Peter Bala's other correct formula `-5/(n-5)*C(2n-6,n)`, since `C(2n-6,n-1) = C(2n-6,n) * n/(n-5)`, giving `C(2n-6,n) * (1 - n/(n-5)) = -5/(n-5) * C(2n-6,n)`. Verified against all 14 terms. The LODA formula `-C(2n-6,n-1)+C(2n-6,n)` also uses the correct `n-1` form.
 
+**Status**: Submitted to OEIS on 2026-03-08.
+
 ## [A172118](https://oeis.org/A172118)
 
 **Current formula** (G. C. Greubel, Jan 23 2020):
