@@ -110,7 +110,7 @@ a(n) = 60*binomial(n+3,4) - 78*binomial(n+2,3) + 19*binomial(n+1,2).
 
 **Evidence**: At n=0, the formula gives `C(0,0) + C(-1,-1) = 1 + 1 = 2`, but a(0) = 1. For all n >= 1 the formula is correct: n=1 gives 4, n=2 gives 20, n=3 gives 112, etc. The entry already has a correct formula marked "For n >= 1, a(n) = 4*binomial(3*n - 1, n - 1) = 4*A025174(n)", acknowledging the domain restriction. The simpler binomial sum formula needs the same restriction.
 
-**Status**: Not yet submitted.
+**Status**: Submitted to OEIS on 2026-03-08.
 
 ## [A322595](https://oeis.org/A322595)
 
@@ -120,7 +120,7 @@ a(n) = 60*binomial(n+3,4) - 78*binomial(n+2,3) + 19*binomial(n+1,2).
 
 **Evidence**: The current formula matches only n=0,1, then diverges: at n=2 it gives 27 but a(2)=21; at n=3 it gives 53 but a(3)=35. The corrected formula expands to `(n^3 + 23*n + 9)/3`, which matches the sequence name's formula (note: the name has `n^3 + 9*n + 14*n + 9` which simplifies to `n^3 + 23*n + 9`). Verified against all 10 listed terms.
 
-**Status**: Not yet submitted.
+**Status**: Submitted to OEIS on 2026-03-08.
 
 ## [A364515](https://oeis.org/A364515)
 
