@@ -134,7 +134,7 @@ if line.startswith('  ') and current_seq_id:
 
 ### Output Files
 - `results/interesting_formulas.txt`: Human-readable report
-- `pending_oeis_submissions.md`: Tracked OEIS corrections — verified but not yet submitted or awaiting processing. Add new entries here when an OEIS formula error is confirmed; remove entries once the correction has been submitted and accepted.
+- `pending_oeis_submissions.md`: Tracked OEIS corrections — verified but not yet submitted or awaiting processing. Add new entries here when an OEIS formula error is confirmed; remove entries completely once the correction is published on OEIS AND confirmed in local data after a refresh (verify with `diagnose_formula.py` showing 0 mismatches). Do not keep "published" entries in the file.
 - Use `max_results` parameter for console vs. file output
 - Full report to file, summary (50 entries) to console
 

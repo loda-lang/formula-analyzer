@@ -88,6 +88,26 @@ To submit: go to `https://oeis.org/AXXXXXX`, click **edit**, update the formula 
 
 After submission, update the denylist comment with the submission date. Once the correction is published and local data is refreshed, remove the entry from both the denylist and `pending_oeis_submissions.md`.
 
+### Tracking and Cleaning Up Published Corrections
+
+**After data refresh**, check if any pending corrections have been published:
+
+1. **Run diagnostics**: Use `diagnose_formula.py` on sequences in `pending_oeis_submissions.md` to check if formulas now validate correctly
+2. **Verify publication**: Check the OEIS formula file (`data/formulas-oeis.txt`) for correction attribution (e.g., `[Corrected by _Name_, Mon DD YYYY]`)
+3. **For published corrections**:
+   - Remove the sequence from `DENYLIST_OEIS` in `formula/data.py`
+   - Remove the entry from `pending_oeis_submissions.md` entirely (do not mark as published — simply delete)
+   - Run tests to confirm the fix: `python -m unittest discover -s tests -p "test_*.py" -v`
+4. **For corrections still pending**:
+   - Keep in both denylist and pending submissions
+   - Update status notes if submission has progressed (e.g., from "proposed" to "reviewed")
+
+**Important**: Only remove entries from `pending_oeis_submissions.md` after BOTH conditions are met:
+- The correction is published on the OEIS website (visible in the entry)
+- The corrected data is present in local files after a refresh (confirmed via `diagnose_formula.py` showing 0 mismatches)
+
+Do not keep entries marked as "PUBLISHED" in the pending file — once confirmed, remove them completely to keep the file clean and focused on actual pending work.
+
 ### Checking OEIS Submissions
 
 When asked to check or review a submitted OEIS correction, fetch the draft page and verify the edit:

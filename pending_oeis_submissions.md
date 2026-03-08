@@ -12,12 +12,6 @@ Corrections that have been verified but not yet submitted (awaiting processing o
 
 **Status**: Not yet submitted.
 
-## ~~[A303295](https://oeis.org/A303295)~~ — PUBLISHED
-
-**Corrected formula**: `a(n) = (4*n+3)*(4*n-2) - (4*n-2)*(4*n-1)/2 + 4 for n > 1.`
-
-**Status**: Correction published on 2026-02-28. Awaiting local data refresh to remove from denylist.
-
 ## [A279112](https://oeis.org/A279112)
 
 **Current formulas**:
@@ -63,22 +57,6 @@ a(n) = n*(n+1)^2*(n+2)*(n+3)/24. (End)
 **Evidence**: The binomial formula `C(n+2,2)*C(n+4,3)/2` computes `a(n+1)` instead of `a(n)`. Algebraically: `C(n+2,2)*C(n+4,3)/2 = (n+1)(n+2)^2(n+3)(n+4)/24`, while `a(n) = n(n+1)^2(n+2)(n+3)/24`. At n=1: formula gives 15 but a(1)=2; at n=2: formula gives 60 but a(2)=15. The corrected version `C(n+1,2)*C(n+3,3)/2` matches all terms. The polynomial formula in the same block is correct. Only the first line of the (Start)/(End) block needs correction.
 
 **Status**: Independently submitted on 2026-02-28. Draft status: proposed.
-
-## [A027930](https://oeis.org/A027930)
-
-**Current formula** (G. C. Greubel, Sep 06 2019):
-```
-a(n) = binomial(n-1, n-7) + (n-3)*((n-3)^4 + 15*(n-3)^2 + 104)/120.
-```
-
-**Corrected formula**:
-```
-a(n) = binomial(n, n-7) + (n-3)*((n-3)^4 + 15*(n-3)^2 + 104)/120.
-```
-
-**Evidence**: The binomial term should be `C(n, n-7) = C(n, 7)`, not `C(n-1, n-7) = C(n-1, 6)`. The error difference equals `C(n,7) - C(n-1,6)` exactly: at n=8 diff=1 (`C(8,7)-C(7,6)=8-7`), at n=9 diff=8 (`C(9,7)-C(8,6)=36-28`), at n=10 diff=36, etc. The polynomial part `(n-3)*((n-3)^4+15*(n-3)^2+104)/120` is correct. The PARI code in the same entry uses `binomial(n+3, n-4)` with PARI's n starting at 1 (= OEIS n-3), which correctly evaluates to `C(OEIS_n, 7)`. The Smiley (2001) and Zerinvary (2007) formulas are correct — only the formula text has a typo (`n-1` instead of `n`). Note: the Magma/SageMath/GAP code by Greubel also uses the wrong `binomial(n-1, n-7)` and should be corrected to `binomial(n, n-7)` as well.
-
-**Status**: Submitted to OEIS on 2026-03-01. Draft status: reviewed.
 
 ## [A056118](https://oeis.org/A056118)
 

@@ -65,6 +65,20 @@ description: "Use when working with denylists, offset handling, formula validati
 6. Once refreshed data has propagated (verify by checking local files), remove the sequence from the denylist and re-run tests.
 7. Otherwise (genuine formula error), add sequence ID to appropriate denylist with comment
 
+**When to Remove from Denylist**:
+
+After a data refresh (`./run_formula_analysis.py --refresh-data`), check for sequences that can be removed:
+
+1. **For stale data entries**: Run `diagnose_formula.py` on denylisted sequences to check if they now validate correctly (0 mismatches)
+2. **For submitted OEIS corrections**: Check if the correction has been published by inspecting `data/formulas-oeis.txt` for correction attribution (e.g., `[Corrected by _Name_, Mon DD YYYY]`)
+3. **Remove from denylist** if:
+   - Formula now validates correctly (0 mismatches in diagnostic output)
+   - Correction is visible in local data files
+4. **Also remove from `pending_oeis_submissions.md`** if the correction has been published and confirmed in local data
+5. **Run tests** after removal to confirm: `python -m unittest discover -s tests -p "test_*.py" -v`
+
+**Important**: Only remove denylist entries after confirming the fix is present in local data AND validates correctly. Do not remove entries based solely on OEIS website status — the local data may lag behind by several days.
+
 **Alternatives Considered**:
 - **Automatic offset correction**: Try formula at offset ±1, ±2 until match found
   - Rejected: Too many false positives, hides real formula errors
@@ -85,3 +99,5 @@ description: "Use when working with denylists, offset handling, formula validati
 - ❌ Adding sequences to denylist without verifying offset mismatch (check manually first)
 - ❌ Removing denylist entries to "improve coverage" (they prevent false validation failures)
 - ❌ Implementing automatic offset correction (creates false positives; use denylists instead)
+- ❌ Keeping published corrections in `pending_oeis_submissions.md` (remove them completely once confirmed in local data)
+- ❌ Removing denylist entries before confirming the fix in local data (check with `diagnose_formula.py` first)
