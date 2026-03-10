@@ -9,27 +9,20 @@ OEIS_ALLOWED_FUNCTIONS = frozenset({"binomial", "gcd"})
 
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
-    # Off-by-one offset issues in OEIS formula text
-    "A297740",   # 34*n^2+30*n+9 for n>=6 shifted by 1; OEIS correction submitted 2026-02-28; refresh triggered 2026-03-08
-    # OEIS formula typos / missing factors
-    "A140228",   # n*(274+85*n+n^4)/60 has typo: 85*n should be 85*n^2 (Maple code is correct); documented in pending_oeis_submissions.md; refresh triggered 2026-03-08
-    "A244501",   # OEIS notation 1/48*n^6 parsed as (1/48)*n^6 instead of n^6/48; refresh triggered 2026-03-08
-    # Parity-specific formulas lacking parity markers
-    "A279112",   # correction published 2026-02-28 with parity markers; refresh triggered 2026-03-08; awaiting local data update
-    "A299256",   # parity-alternating formulas produce fractional results; refresh triggered 2026-03-08
+    # OEIS notation/parser limitations
+    "A244501",   # OEIS notation 1/48*n^6 parsed as (1/48)*n^6 instead of n^6/48; parser limitation
+    # Parity-specific formulas produce fractional results
+    "A299256",   # parity-alternating formulas produce fractional results
     # Binomial formulas with fractional arguments and large gamma values — float precision issue
-    "A364517",   # binomial(9*n/2, 2*n) loses precision at n>=3 due to large gamma values; refresh triggered 2026-03-08
+    "A364517",   # binomial(9*n/2, 2*n) loses precision at n>=3 due to large gamma values
+    # Binomial edge case with negative arguments
+    "A113127",   # parser limitation: generalized binomial gives non-zero C(0,-1), C(-1,-2), C(-2,-3); formula correct with standard C(a,b)=0 for b<0
+    # OEIS entries with both correct and incorrect formulas (awaiting incorrect formula deletion)
+    "A056118",   # Greubel formula 11*C(n+5,5)-8*C(n+4,4) has wrong coefficient: -8 should be -10; entry has correct formula too; awaiting incorrect formula deletion
     # Binomial formulas with missing/incorrect domain restrictions
-    "A003600",   # binomial(n+2,n-1)+binomial(n,n-1) gives 0 at n=0 (k=-1); valid from n>=1; OEIS correction submitted 2026-02-28; refresh triggered 2026-03-08
-    "A006470",   # binomial(n+2,2)*binomial(n+4,3)/2 computes a(n+1) not a(n); correction submitted by Zhuorui He 2026-02-28; refresh triggered 2026-03-08
-    "A056118",   # Greubel formula 11*C(n+5,5)-8*C(n+4,4) has wrong coefficient: -8 should be -10; refresh triggered 2026-03-08
-    "A113127",   # parser limitation: generalized binomial gives non-zero C(0,-1), C(-1,-2), C(-2,-3); formula correct with standard C(a,b)=0 for b<0; refresh triggered 2026-03-08
-    "A115144",   # Bala formula C(2n-6,n)-C(2n-6,n+1) has typo: n+1 should be n-1; correct is C(2n-6,n)-C(2n-6,n-1) = -5/(n-5)*C(2n-6,n); refresh triggered 2026-03-08
-    "A172118",   # Greubel coefficient 12 should be 60; correct is 60*C(n+3,4)-78*C(n+2,3)+19*C(n+1,2); refresh triggered 2026-03-08
-    "A227726",   # binomial(3*n, n)+binomial(3*n-1, n-1) missing domain restriction for n>=1; documented in pending_oeis_submissions.md; refresh triggered 2026-03-08
-    "A322595",   # binomial formula 2*C(n+1,3)+6*C(n+1,2)+2*C(n+1,1)+1 has wrong coefficients; correct is 2*C(n,3)+2*C(n,2)+8*C(n,1)+3; documented in pending_oeis_submissions.md; refresh triggered 2026-03-08
-    "A364515",   # (1/2)*binomial(...) produces non-integer at offset 0; needs domain restriction for n>=1; documented in pending_oeis_submissions.md; refresh triggered 2026-03-08
-    "A381864",   # binomial polynomial formula completely wrong; gives 0,0,0,0,0 but expected 15,33,35,44,45; documented in pending_oeis_submissions.md; refresh triggered 2026-03-08
+    "A227726",   # binomial(3*n, n)+binomial(3*n-1, n-1) missing domain restriction for n>=1; documented in pending_oeis_submissions.md
+    "A364515",   # (1/2)*binomial(...) produces non-integer at offset 0; needs domain restriction for n>=1; documented in pending_oeis_submissions.md
+    "A381864",   # binomial polynomial formula completely wrong; gives 0,0,0,0,0 but expected 15,33,35,44,45; documented in pending_oeis_submissions.md
 }
 
 DENYLIST_LODA: set[str] = {
