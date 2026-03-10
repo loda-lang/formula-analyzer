@@ -4,10 +4,14 @@
 Usage:
     python diagnose_formula.py A003600
     python diagnose_formula.py A003600 A006470 A027930
+    python diagnose_formula.py --check-denylist
 
 Collects local data (formulas, offset, terms, name) for each sequence,
 parses all OEIS formulas, evaluates them against known terms, and reports
 mismatches with details.
+
+The --check-denylist mode analyzes all denylisted sequences and recommends
+which can be safely removed.
 """
 
 import re
@@ -198,11 +202,212 @@ def diagnose(seq_id: str) -> None:
     print()
 
 
+def check_formula_status(seq_id: str) -> dict:
+    """Check validation status of a denylisted sequence.
+    
+    Returns dict with:
+        - seq_id: sequence ID
+        - in_oeis_deny: bool
+        - in_loda_deny: bool
+        - status: 'validated', 'rejected_by_parser', 'has_mismatches', 'no_data'
+        - ok_count: number of successful validations
+        - fail_count: number of mismatches
+        - not_parseable_count: number of formulas rejected by parser
+        - correction_metadata: list of correction attributions found
+    """
+    result = {
+        'seq_id': seq_id,
+        'in_oeis_deny': seq_id in DENYLIST_OEIS,
+        'in_loda_deny': seq_id in DENYLIST_LODA,
+        'status': 'no_data',
+        'ok_count': 0,
+        'fail_count': 0,
+        'not_parseable_count': 0,
+        'correction_metadata': []
+    }
+    
+    # Load data
+    offsets = load_offsets(str(DATA_DIR / "offsets"))
+    offset = offsets.get(seq_id)
+    if offset is None:
+        return result
+    
+    terms_dict = load_stripped_terms(str(DATA_DIR / "stripped"), {seq_id}, max_terms=20)
+    terms = terms_dict.get(seq_id, [])
+    if not terms:
+        return result
+    
+    # Check OEIS formulas
+    oeis_lines = load_oeis_lines(seq_id)
+    formula_texts = extract_oeis_formulas(oeis_lines)
+    
+    if not formula_texts:
+        result['status'] = 'no_data'
+        return result
+    
+    # Look for correction metadata in formula lines
+    for line in oeis_lines:
+        if re.search(r'\[corrected by\s+_[^_]+_,\s+\w+\s+\d+\s+\d{4}\]', line, re.IGNORECASE):
+            match = re.search(r'\[corrected by\s+(_[^_]+_),\s+(\w+\s+\d+\s+\d{4})\]', line, re.IGNORECASE)
+            if match:
+                result['correction_metadata'].append(f"{match.group(1)} on {match.group(2)}")
+    
+    parser = FormulaParser()
+    total_formulas = 0
+    
+    for text in formula_texts:
+        total_formulas += 1
+        formula = _parse_oeis_formula_text(seq_id, text, parser)
+        
+        if formula is None:
+            result['not_parseable_count'] += 1
+            continue
+        
+        # Evaluate formula
+        lower_bound = formula.lower_bound if formula.lower_bound is not None else offset
+        start_idx = max(0, lower_bound - offset)
+        limit = min(len(terms), start_idx + 10)
+        
+        formula_ok = True
+        for idx in range(start_idx, limit):
+            n = offset + idx
+            expected = terms[idx]
+            try:
+                got = formula.evaluate(n)
+                if got == expected:
+                    result['ok_count'] += 1
+                else:
+                    result['fail_count'] += 1
+                    formula_ok = False
+                    break
+            except Exception:
+                result['fail_count'] += 1
+                formula_ok = False
+                break
+    
+    # Determine overall status
+    if result['not_parseable_count'] == total_formulas:
+        result['status'] = 'rejected_by_parser'
+    elif result['fail_count'] == 0 and result['ok_count'] > 0:
+        result['status'] = 'validated'
+    elif result['fail_count'] > 0:
+        result['status'] = 'has_mismatches'
+    else:
+        result['status'] = 'no_data'
+    
+    return result
+
+
+def check_denylist_status() -> None:
+    """Check all denylisted sequences and report which can be removed."""
+    print("=" * 80)
+    print("DENYLIST STATUS CHECK")
+    print("=" * 80)
+    print()
+    
+    all_denylisted = sorted(DENYLIST_OEIS | DENYLIST_LODA)
+    
+    if not all_denylisted:
+        print("No sequences in denylist.")
+        return
+    
+    print(f"Checking {len(all_denylisted)} denylisted sequences...")
+    print()
+    
+    can_remove_validated = []
+    can_remove_parser_rejected = []
+    must_keep = []
+    no_data = []
+    
+    for seq_id in all_denylisted:
+        result = check_formula_status(seq_id)
+        
+        if result['status'] == 'validated':
+            can_remove_validated.append(result)
+        elif result['status'] == 'rejected_by_parser':
+            can_remove_parser_rejected.append(result)
+        elif result['status'] == 'has_mismatches':
+            must_keep.append(result)
+        else:
+            no_data.append(result)
+    
+    # Report results
+    print("✅ CAN REMOVE (formulas now validate correctly):")
+    print("-" * 80)
+    if can_remove_validated:
+        for r in can_remove_validated:
+            denylist_type = "OEIS" if r['in_oeis_deny'] else "LODA"
+            corrections = ""
+            if r['correction_metadata']:
+                corrections = " [" + ", ".join(r['correction_metadata']) + "]"
+            print(f"  {r['seq_id']} ({denylist_type}): {r['ok_count']} OK, 0 MISMATCH{corrections}")
+    else:
+        print("  (none)")
+    print()
+    
+    print("✅ CAN REMOVE (all formulas rejected by parser, denylist unnecessary):")
+    print("-" * 80)
+    if can_remove_parser_rejected:
+        for r in can_remove_parser_rejected:
+            denylist_type = "OEIS" if r['in_oeis_deny'] else "LODA"
+            print(f"  {r['seq_id']} ({denylist_type}): {r['not_parseable_count']} formula(s) not parseable")
+    else:
+        print("  (none)")
+    print()
+    
+    print("⚠️  KEEP IN DENYLIST (formulas have validation failures):")
+    print("-" * 80)
+    if must_keep:
+        for r in must_keep:
+            denylist_type = "OEIS" if r['in_oeis_deny'] else "LODA"
+            print(f"  {r['seq_id']} ({denylist_type}): {r['ok_count']} OK, {r['fail_count']} MISMATCH")
+    else:
+        print("  (none)")
+    print()
+    
+    if no_data:
+        print("ℹ️  NO DATA (cannot evaluate):")
+        print("-" * 80)
+        for r in no_data:
+            denylist_type = "OEIS" if r['in_oeis_deny'] else "LODA"
+            print(f"  {r['seq_id']} ({denylist_type})")
+        print()
+    
+    # Summary
+    print("=" * 80)
+    print("SUMMARY:")
+    print(f"  Total denylisted: {len(all_denylisted)}")
+    print(f"  Can remove (validated): {len(can_remove_validated)}")
+    print(f"  Can remove (rejected by parser): {len(can_remove_parser_rejected)}")
+    print(f"  Must keep (has mismatches): {len(must_keep)}")
+    if no_data:
+        print(f"  No data: {len(no_data)}")
+    print()
+    
+    total_removable = len(can_remove_validated) + len(can_remove_parser_rejected)
+    if total_removable > 0:
+        print(f"✨ {total_removable} sequence(s) can be safely removed from the denylist.")
+        print()
+        print("Next steps:")
+        print("  1. Remove sequences from DENYLIST_OEIS/DENYLIST_LODA in formula/data.py")
+        print("  2. Remove from pending_oeis_submissions.md if listed there")
+        print("  3. Run tests: python -m unittest tests.test_formula_parser -v")
+    else:
+        print("No sequences can be removed at this time.")
+    print()
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} <sequence_id> [<sequence_id> ...]")
+        print(f"       {sys.argv[0]} --check-denylist")
         print(f"Example: {sys.argv[0]} A003600 A006470")
         sys.exit(1)
+    
+    # Check for --check-denylist flag
+    if sys.argv[1] == "--check-denylist":
+        check_denylist_status()
+        return
 
     seq_pattern = re.compile(r"^A\d{6}$")
     for arg in sys.argv[1:]:

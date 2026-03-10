@@ -25,11 +25,7 @@ DENYLIST_OEIS: set[str] = {
     "A381864",   # binomial polynomial formula completely wrong; gives 0,0,0,0,0 but expected 15,33,35,44,45; documented in pending_oeis_submissions.md
 }
 
-DENYLIST_LODA: set[str] = {
-    # LODA formulas with incorrect offset in LODA program
-    "A093353",   # LODA #offset 1 but OEIS offset 0; program removal triggered 2026-02-28; still pending as of 2026-03-08; refresh triggered 2026-03-08
-    "A283049",   # LODA no #offset (default 0) but OEIS offset 1; program removal triggered 2026-02-28; still pending as of 2026-03-08; refresh triggered 2026-03-08
-}
+DENYLIST_LODA: set[str] = set()  # Currently empty - all issues resolved or formulas rejected by parser
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)
 OEIS_HEADER_RE = re.compile(r"^(A\d{6}):\s*(.+)$")

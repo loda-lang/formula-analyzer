@@ -79,6 +79,36 @@ After a data refresh (`./run_formula_analysis.py --refresh-data`), check for seq
 
 **Important**: Only remove denylist entries after confirming the fix is present in local data AND validates correctly. Do not remove entries based solely on OEIS website status — the local data may lag behind by several days.
 
+## Checking Denylist Status (Automated)
+
+**When to check**: After running `./run_formula_analysis.py --refresh-data`
+
+**Quick check** (automated):
+```bash
+python diagnose_formula.py --check-denylist
+```
+
+This will analyze all denylisted sequences and categorize them:
+- ✅ **Can remove (validated)**: All formulas pass validation (0 MISMATCH)
+- ✅ **Can remove (rejected by parser)**: All formulas marked "Not parseable by pipeline" (denylist unnecessary)
+- ⚠️ **Keep in denylist**: At least one formula has validation failures
+
+**Manual verification** (if automated mode unavailable):
+1. Run diagnostics on all denylisted sequences:
+   ```bash
+   python diagnose_formula.py A244501 A299256 A364517 ...
+   ```
+2. For each sequence, determine:
+   - **All formulas "Not parseable by pipeline"** → Remove from denylist (parser already rejects them)
+   - **All formulas validate (0 MISMATCH)** → Remove from denylist (correction published and working)
+   - **Any formula has MISMATCH** → Keep in denylist (still failing validation)
+3. Look for correction metadata in formula text (e.g., `[Corrected by _Name_, Mon DD YYYY]`)
+4. Cross-check with `pending_oeis_submissions.md` for submission status
+5. Remove from both denylist and `pending_oeis_submissions.md` when confirmed
+6. Run tests to verify: `python -m unittest tests.test_formula_parser -v`
+
+**Key distinction**: Formulas rejected during parsing (e.g., parity-conditional formulas like "for even n", recursive definitions, generating functions) don't need denylist entries because they never reach the validation stage where they could cause test failures.
+
 **Alternatives Considered**:
 - **Automatic offset correction**: Try formula at offset ±1, ±2 until match found
   - Rejected: Too many false positives, hides real formula errors
