@@ -9,18 +9,16 @@ OEIS_ALLOWED_FUNCTIONS = frozenset({"binomial", "gcd"})
 
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
-    # OEIS notation/parser limitations
-    "A244501",   # OEIS notation 1/48*n^6 parsed as (1/48)*n^6 instead of n^6/48; parser limitation
-    # Parity-specific formulas produce fractional results
-    "A299256",   # parity-alternating formulas produce fractional results
+    # OEIS formulas with incorrect constant terms
+    "A244501",   # formula has wrong constant term: 6 should be 63; all values off by -57; documented in pending_oeis_submissions.md
+    # Parity-specific formulas missing parity restrictions
+    "A299256",   # two formulas missing parity restrictions: (9*n^2-1)/2 for odd n, 9*n^2/2 for even n; documented in pending_oeis_submissions.md
     # Binomial formulas with fractional arguments and large gamma values — float precision issue
     "A364517",   # binomial(9*n/2, 2*n) loses precision at n>=3 due to large gamma values
-    # Binomial edge case with negative arguments
-    "A113127",   # parser limitation: generalized binomial gives non-zero C(0,-1), C(-1,-2), C(-2,-3); formula correct with standard C(a,b)=0 for b<0
+    # Binomial formulas missing domain restrictions
+    "A113127",   # binomial sum formula needs domain restriction for n>=2; produces wrong values at n=0,1; documented in pending_oeis_submissions.md
     # OEIS entries with both correct and incorrect formulas (awaiting incorrect formula deletion)
     "A056118",   # Greubel formula 11*C(n+5,5)-8*C(n+4,4) has wrong coefficient: -8 should be -10; entry has correct formula too; awaiting incorrect formula deletion
-    # Binomial formulas with incorrect domain restrictions or completely wrong formulas
-    "A381864",   # binomial polynomial formula completely wrong; gives 0,0,0,0,0 but expected 15,33,35,44,45; documented in pending_oeis_submissions.md
 }
 
 DENYLIST_LODA: set[str] = set()  # Currently empty - all issues resolved or formulas rejected by parser
