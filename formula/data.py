@@ -19,9 +19,7 @@ DENYLIST_OEIS: set[str] = {
     "A113127",   # parser limitation: generalized binomial gives non-zero C(0,-1), C(-1,-2), C(-2,-3); formula correct with standard C(a,b)=0 for b<0
     # OEIS entries with both correct and incorrect formulas (awaiting incorrect formula deletion)
     "A056118",   # Greubel formula 11*C(n+5,5)-8*C(n+4,4) has wrong coefficient: -8 should be -10; entry has correct formula too; awaiting incorrect formula deletion
-    # Binomial formulas with missing/incorrect domain restrictions
-    "A227726",   # binomial(3*n, n)+binomial(3*n-1, n-1) missing domain restriction for n>=1; documented in pending_oeis_submissions.md
-    "A364515",   # (1/2)*binomial(...) produces non-integer at offset 0; needs domain restriction for n>=1; documented in pending_oeis_submissions.md
+    # Binomial formulas with incorrect domain restrictions or completely wrong formulas
     "A381864",   # binomial polynomial formula completely wrong; gives 0,0,0,0,0 but expected 15,33,35,44,45; documented in pending_oeis_submissions.md
 }
 
