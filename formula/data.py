@@ -205,6 +205,41 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
     # Strip trailing domain restriction from expression (e.g., "n^2 + 1 for n >= 2")
     expr = re.sub(r'\s+for\s+n\s*>=?\s*\d+.*$', '', expr, flags=re.IGNORECASE).strip().rstrip(".;")
 
+    # Detect recursive formulas: expressions containing a(n-k) or a(n+k) references
+    is_recursive = bool(re.search(r'\ba\s*\(', expr, re.IGNORECASE))
+
+    if is_recursive:
+        # Strip trailing initial conditions and extract the highest initial index
+        # to set a lower_bound for non-recursive formulas.
+        #   "2*a(n-1)+1, a(0)=1, a(1)=2"  -> "2*a(n-1)+1"
+        #   "expr, a(0) = 1"               -> "expr" with lower_bound >= 1
+        #   "expr with a(1) = 9"           -> "expr" with lower_bound >= 2
+        max_init_idx = -1
+        for init_match in re.finditer(r'\ba\((\d+)\)\s*=\s*\d+', expr, re.IGNORECASE):
+            max_init_idx = max(max_init_idx, int(init_match.group(1)))
+        expr = re.sub(r'\s*[;,]\s*a\(\d+\)\s*=.*$', '', expr, flags=re.IGNORECASE).strip().rstrip(".;")
+        expr = re.sub(r'\s+with\s+a\(\d+\)\s*=.*$', '', expr, flags=re.IGNORECASE).strip().rstrip(".;")
+        # Strip trailing attribution (e.g., " - _Author_, Date")
+        expr = re.sub(r'\s+-\s+_.*$', '', expr).strip().rstrip(".;")
+        # Check remaining expression for a(n-k) references (true recurrence)
+        has_recur_refs = bool(re.search(r'\ba\s*\([^)]*n[^)]*\)', expr, re.IGNORECASE))
+        if not has_recur_refs:
+            # Non-recursive formula with initial condition overrides (e.g., "expr, a(0) = 1")
+            # Set lower_bound to exclude the overridden indices
+            if max_init_idx >= 0:
+                init_lower = max_init_idx + 1
+                lower_bound = max(lower_bound, init_lower) if lower_bound is not None else init_lower
+        else:
+            # Reject non-simple recursive references: only allow a(n-k) and a(n+k) where k is a constant
+            # This rejects a(n/2), a(2*n), a(a(n)), etc.
+            for ref_match in re.finditer(r'\ba\s*\(([^)]+)\)', expr, re.IGNORECASE):
+                arg = ref_match.group(1).strip()
+                if not re.fullmatch(r'n\s*[-+]\s*\d+', arg, re.IGNORECASE):
+                    return None
+            # Reject recurrences involving other sequences (e.g., "a(n) = A089806(n)*... + a(n-1)")
+            if re.search(r'A\d{6}\s*\(', expr):
+                return None
+
     # Restrict OEIS parsing to basic operations and whitelisted functions
     if not re.fullmatch(r"[0-9nN\+\-\*\^\(\)/,\sa-zA-Z]+", expr):
         return None

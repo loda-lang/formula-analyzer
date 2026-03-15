@@ -67,7 +67,10 @@ class TestFormulaParser(unittest.TestCase):
             for idx in range(start_idx, limit):
                 n = offset + idx
                 try:
-                    value = formula.evaluate(n)
+                    if formula.is_recursive:
+                        value = formula.evaluate(n, terms=terms, offset=offset)
+                    else:
+                        value = formula.evaluate(n)
                 except ValueError:
                     mismatches += 1
                     mismatch_examples.append({

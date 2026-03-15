@@ -10,7 +10,7 @@ description: "Use when working on formula parsing, the tokenizer, AST nodes, exp
 **Architecture**:
 - **Tokenizer** (`_tokenize`): Regex-based lexer producing tokens for literals, variables, operators, functions, and delimiters
 - **Parser** (`Parser` class): Recursive descent parser building AST from tokens
-- **AST Nodes**: Typed nodes for literals, variables, binary operations, unary operations, and function calls
+- **AST Nodes**: Typed nodes for literals, variables, binary operations, unary operations, function calls, and recursive references
 - **Evaluator** (`_eval_node`): Recursive evaluation of AST nodes
 
 **Supported Syntax**:
@@ -18,17 +18,21 @@ description: "Use when working on formula parsing, the tokenizer, AST nodes, exp
 - Exponentiation
 - Whitelisted mathematical functions with arguments
 - Parentheses for grouping
+- Simple recursive references: `a(n-k)` where k is a constant integer
 
 **Key Design Decisions**:
 1. **Float division**: Division uses true division (not integer division) to support functions like ceiling correctly
 2. **Function whitelist via `allowed_functions`**: Only functions in the `allowed_functions` frozenset are recognized by the tokenizer; unknown identifiers raise errors. Defaults to `ALL_FUNCTIONS`; OEIS uses `OEIS_ALLOWED_FUNCTIONS` (a subset)
 3. **Case-insensitive variable**: Variable `n` handled case-insensitively
 4. **Parse-time validation**: Unsupported operations rejected during parsing (not just evaluation)
+5. **Recursive references**: `a(expr)` is tokenized as `RECUR` and parsed into `RecurNode`; only simple forms `a(n-k)` accepted in OEIS formulas
+6. **Recursive evaluation**: Formulas with `RecurNode` require stripped terms and offset for iterative evaluation; `Formula.evaluate(n, terms, offset)` builds a memo table from initial terms and computes forward
 
 **Error Handling**:
 - Parse errors return `None` from `FormulaParser.parse_expression()`
 - Evaluation errors (e.g., division by zero) raise ValueError
 - Unsupported functions/identifiers raise ValueError with descriptive message
+- Recursive formulas missing required terms raise ValueError
 
 ## Module: formula/data.py
 
@@ -62,6 +66,14 @@ description: "Use when working on formula parsing, the tokenizer, AST nodes, exp
 - Rejects formulas where `a(n) =` is inside a Sum/Product expression (prefix ends with `}`)
 - Strips trailing domain text and initial conditions from expression before parsing
 
+**OEIS Recursive Formula Handling**:
+- Detects `a(` in the expression to identify potential recursive references
+- Strips trailing initial conditions: `a(n) = expr, a(0)=1, a(1)=2` → `expr`
+- Strips `with a(k) = v` suffixes and trailing attribution
+- For non-recursive formulas with initial condition overrides (e.g., `expr, a(0) = 1`): sets `lower_bound` from the highest initial index + 1
+- For true recurrences: only accepts simple `a(n-k)` / `a(n+k)` forms (constant offset); rejects `a(n/2)`, `a(2*n)`, `a(a(n))`
+- Rejects recurrences referencing other sequences (e.g., `A089806(n)*... + a(n-1)`)
+
 **OEIS Formula Parsing Restrictions**:
 - Charset allows digits, `n`, basic operators, parentheses, commas, and alphabetic characters
 - Function filtering delegated to the parser via `allowed_functions=OEIS_ALLOWED_FUNCTIONS`; the tokenizer rejects any identifier not in that set
@@ -89,6 +101,7 @@ These restrictions keep coverage focused on formulas that can be reliably valida
    - Compute effective lower bound: `formula.lower_bound` if set, otherwise sequence offset
    - Skip terms below the formula's domain (`start_idx = max(0, lower_bound - offset)`)
    - Evaluate at up to 5 positions within the valid domain
+   - For recursive formulas: pass stripped terms and offset to `formula.evaluate(n, terms, offset)`
    - Compare with expected OEIS terms
    - Track mismatches
 7. Assert: `mismatches == 0` (strict validation)

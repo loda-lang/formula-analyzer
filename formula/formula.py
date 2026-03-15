@@ -33,6 +33,12 @@ class FuncNode:
         self.args = args
 
 
+class RecurNode:
+    """AST node for recursive references a(expr), e.g. a(n-1)."""
+    def __init__(self, arg: object):
+        self.arg = arg  # AST node for the argument expression
+
+
 def _is_int(value) -> bool:
     """Check whether a value is an integer (or integer-valued float/Fraction)."""
     if isinstance(value, int):
@@ -143,17 +149,27 @@ def _to_int(value: Union[int, float, Fraction]) -> int:
     return int(value)
 
 
-def eval_node(node: object, n: int) -> int:
+def eval_node(node: object, n: int, memo: Optional[dict] = None) -> int:
     if isinstance(node, NumNode):
         return int(node.value)
     if isinstance(node, VarNode):
         return int(n)
     if isinstance(node, UnaryNode):
-        val = eval_node(node.operand, n)
+        val = eval_node(node.operand, n, memo)
         return val if node.op == "+" else -val
+    if isinstance(node, RecurNode):
+        if memo is None:
+            raise ValueError("Recursive reference without memo")
+        idx = eval_node(node.arg, n, memo)
+        if not _is_int(idx):
+            raise ValueError("Non-integer recursive index")
+        idx = int(idx)
+        if idx not in memo:
+            raise ValueError(f"Missing term a({idx})")
+        return memo[idx]
     if isinstance(node, FuncNode):
         # Evaluate all arguments first
-        arg_vals = [eval_node(arg, n) for arg in node.args]
+        arg_vals = [eval_node(arg, n, memo) for arg in node.args]
         if node.name == "floor":
             _check_arg_count("floor", arg_vals, 1)
             return math.floor(arg_vals[0])
@@ -177,8 +193,8 @@ def eval_node(node: object, n: int) -> int:
             return _sumdigits(x, base)
         raise ValueError(f"Unknown function: {node.name}")
     if isinstance(node, BinNode):
-        left = eval_node(node.left, n)
-        right = eval_node(node.right, n)
+        left = eval_node(node.left, n, memo)
+        right = eval_node(node.right, n, memo)
         if node.op == "+":
             return left + right
         if node.op == "-":
@@ -196,6 +212,33 @@ def eval_node(node: object, n: int) -> int:
     raise ValueError("Invalid node")
 
 
+def _has_recurrence(node: object) -> bool:
+    """Check if an AST contains any RecurNode references."""
+    if isinstance(node, RecurNode):
+        return True
+    if isinstance(node, BinNode):
+        return _has_recurrence(node.left) or _has_recurrence(node.right)
+    if isinstance(node, UnaryNode):
+        return _has_recurrence(node.operand)
+    if isinstance(node, FuncNode):
+        return any(_has_recurrence(arg) for arg in node.args)
+    return False
+
+
+def _convert_result(result) -> int:
+    """Convert an eval_node result to an integer."""
+    if isinstance(result, Fraction):
+        if result.denominator == 1:
+            return int(result.numerator)
+        return float(result)
+    if isinstance(result, float):
+        rounded = round(result)
+        if abs(result - rounded) < 1e-9:
+            return rounded
+        return int(result)
+    return int(result)
+
+
 @dataclass
 class Formula:
     sequence_id: str
@@ -203,18 +246,31 @@ class Formula:
     expression: str
     node: object
     lower_bound: Optional[int] = None
+    is_recursive: bool = False
 
-    def evaluate(self, n: int) -> int:
+    def __post_init__(self):
+        self.is_recursive = _has_recurrence(self.node)
+
+    def evaluate(self, n: int, terms: Optional[List[int]] = None, offset: int = 0) -> int:
+        if self.is_recursive:
+            return self._evaluate_recursive(n, terms, offset)
         result = eval_node(self.node, n)
-        if isinstance(result, Fraction):
-            if result.denominator == 1:
-                return int(result.numerator)
-            return float(result)
-        # Round to nearest integer if result is very close to an integer (floating-point precision)
-        if isinstance(result, float):
-            rounded = round(result)
-            # If within floating-point precision tolerance, return the integer
-            if abs(result - rounded) < 1e-9:
-                return rounded
-            return int(result)
-        return int(result)
+        return _convert_result(result)
+
+    def _evaluate_recursive(self, n: int, terms: Optional[List[int]], offset: int) -> int:
+        if terms is None:
+            raise ValueError("Recursive formula requires terms for evaluation")
+        # Build memo from known terms
+        memo: dict = {}
+        for i, val in enumerate(terms):
+            memo[offset + i] = val
+        # Compute iteratively from the earliest missing index up to n
+        start = offset + len(terms)
+        for k in range(start, n + 1):
+            if k in memo:
+                continue
+            result = eval_node(self.node, k, memo)
+            memo[k] = _convert_result(result)
+        if n not in memo:
+            raise ValueError(f"Cannot compute a({n})")
+        return memo[n]

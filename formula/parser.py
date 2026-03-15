@@ -7,6 +7,7 @@ from formula.formula import (
     BinNode,
     UnaryNode,
     FuncNode,
+    RecurNode,
     Formula,
 )
 
@@ -71,6 +72,8 @@ def _tokenize(expr: str, allowed: frozenset) -> List[Token]:
             func_name = m.group(1).lower()
             if func_name == "n":
                 tokens.append(("VAR", "n"))
+            elif func_name == "a":
+                tokens.append(("RECUR", "a"))
             elif func_name in allowed:
                 tokens.append(("FUNC", func_name))
             else:
@@ -160,7 +163,7 @@ class Parser:
             node = BinNode("^", node, NumNode(exp_tok[1]))
         return node
 
-    # primary := INT | VAR | FUNC '(' expr ')' | '(' expr ')'
+    # primary := INT | VAR | FUNC '(' expr (',' expr)* ')' | RECUR '(' expr ')' | '(' expr ')'
     def primary(self) -> object:
         kind = self.peek()[0]
         if kind == "INT":
@@ -168,6 +171,12 @@ class Parser:
         if kind == "VAR":
             self.eat("VAR")
             return VarNode()
+        if kind == "RECUR":
+            self.eat("RECUR")
+            self.eat("LP")
+            arg = self.expr()
+            self.eat("RP")
+            return RecurNode(arg)
         if kind == "FUNC":
             func_name = self.eat("FUNC")[1]
             self.eat("LP")
