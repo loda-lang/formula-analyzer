@@ -89,14 +89,35 @@ def _parse_loda_line(line: str, parser: FormulaParser) -> Optional[Formula]:
         return None
     seq_id, expr = match.group(1), match.group(2)
 
-    # Detect formulas with explicit initial terms: a(0) = ..., a(1) = ..., etc.
-    # These are not suitable for general formula validation.
-    if re.search(r'\ba\(\d+\)\s*=', expr):
+    # Reject multi-variable formulas (containing b(n), c(n), etc.)
+    if re.search(r'\b[b-zB-Z]\s*\(\s*n\s*[-+)]', expr):
         return None
 
-    # Strip trailing metadata (initial conditions, extra recurrences) by cutting at
-    # the first comma that appears at parentheses depth zero, but keep commas
-    # inside function calls like binomial(..., ...).
+    # Extract highest initial condition index before stripping (e.g., a(9) = ... -> 9)
+    max_init_idx = -1
+    for init_match in re.finditer(r'\ba\((\d+)\)\s*=\s*-?\d+', expr, re.IGNORECASE):
+        max_init_idx = max(max_init_idx, int(init_match.group(1)))
+
+    # Strip trailing initial conditions: "expr, a(2) = 2, a(1) = 1, a(0) = 0"
+    expr = re.sub(r'\s*,\s*a\(\d+\)\s*=.*$', '', expr, flags=re.IGNORECASE).strip()
+
+    # Check if this is a recursive formula (contains a(n-k) references after stripping)
+    is_recursive = bool(re.search(r'\ba\s*\(\s*n\s*[-+]', expr, re.IGNORECASE))
+
+    lower_bound: Optional[int] = None
+    if is_recursive:
+        # Reject non-simple recursive references: only allow a(n-k) and a(n+k)
+        for ref_match in re.finditer(r'\ba\s*\(([^)]+)\)', expr, re.IGNORECASE):
+            arg = ref_match.group(1).strip()
+            if not re.fullmatch(r'n\s*[-+]\s*\d+', arg, re.IGNORECASE):
+                return None
+    elif max_init_idx >= 0:
+        # Non-recursive formula with initial condition overrides (e.g., "a(n) = 1, a(0) = 0")
+        # Set lower_bound to exclude the overridden indices
+        lower_bound = max_init_idx + 1
+
+    # Strip trailing metadata by cutting at the first comma at parentheses depth zero,
+    # but keep commas inside function calls like binomial(..., ...).
     depth = 0
     cut_idx = None
     for idx, ch in enumerate(expr):
@@ -109,7 +130,12 @@ def _parse_loda_line(line: str, parser: FormulaParser) -> Optional[Formula]:
             break
     if cut_idx is not None:
         expr = expr[:cut_idx].strip()
-    return parser.parse_expression(seq_id, "loda", expr)
+
+    formula = parser.parse_expression(seq_id, "loda", expr, lower_bound=lower_bound)
+    # Reject recurrences deeper than the validation limit
+    if formula and formula.recurrence_depth > MAX_RECURRENCE_DEPTH:
+        return None
+    return formula
 
 
 def _extract_lower_bound(op: str, value: int) -> int:
