@@ -7,6 +7,10 @@ from formula.parser import FormulaParser, ALL_FUNCTIONS
 # Functions allowed in OEIS formulas (subset of ALL_FUNCTIONS)
 OEIS_ALLOWED_FUNCTIONS = frozenset({"binomial", "gcd"})
 
+# Maximum recurrence depth (largest k in a(n-k)) we accept.
+# Deeper recurrences require too many seed terms and are impractical to validate.
+MAX_RECURRENCE_DEPTH = 50
+
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
     # OEIS formulas with incorrect constant terms
@@ -15,6 +19,11 @@ DENYLIST_OEIS: set[str] = {
     "A299256",   # two formulas missing parity restrictions: (9*n^2-1)/2 for odd n, 9*n^2/2 for even n; documented in pending_oeis_submissions.md
     # Binomial formulas with fractional arguments and large gamma values — float precision issue
     "A364517",   # binomial(9*n/2, 2*n) loses precision at n>=3 due to large gamma values
+    "A347854",   # binomial with 3*n/2 argument loses precision at n>=5
+    "A347855",   # binomial with 4*n/3 argument loses precision at n>=5
+    "A347856",   # binomial with 3*n/2 argument loses precision at n>=5
+    "A347857",   # binomial with 5*n/2 argument loses precision at n>=5
+    "A347858",   # binomial with 9*n/2 argument loses precision at n>=5
     # Binomial formulas missing domain restrictions
     "A113127",   # binomial sum formula needs domain restriction for n>=2; produces wrong values at n=0,1; documented in pending_oeis_submissions.md
     # OEIS entries with both correct and incorrect formulas (awaiting incorrect formula deletion)
@@ -250,8 +259,12 @@ def _parse_oeis_formula_text(seq_id: str, text: str, parser: FormulaParser) -> O
         return None
     if not any(op in expr for op in ["+", "*", "^"]):
         return None
-    return parser.parse_expression(seq_id, "oeis", expr, lower_bound=lower_bound,
-                                   allowed_functions=OEIS_ALLOWED_FUNCTIONS)
+    formula = parser.parse_expression(seq_id, "oeis", expr, lower_bound=lower_bound,
+                                      allowed_functions=OEIS_ALLOWED_FUNCTIONS)
+    # Reject recurrences deeper than the validation limit
+    if formula and formula.recurrence_depth > MAX_RECURRENCE_DEPTH:
+        return None
+    return formula
 
 
 def load_offsets(path: str) -> Dict[str, int]:

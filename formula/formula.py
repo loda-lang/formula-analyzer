@@ -225,6 +225,27 @@ def _has_recurrence(node: object) -> bool:
     return False
 
 
+def _recurrence_depth(node: object) -> int:
+    """Return the maximum backward reference depth in an AST.
+
+    For example, ``a(n-3)`` has depth 3, ``a(n-1) + a(n-2)`` has depth 2.
+    Returns 0 for non-recursive ASTs.
+    """
+    if isinstance(node, RecurNode):
+        # The argument should be n-k; extract k from BinNode('-', VarNode, NumNode(k))
+        arg = node.arg
+        if isinstance(arg, BinNode) and arg.op == "-" and isinstance(arg.left, VarNode) and isinstance(arg.right, NumNode):
+            return arg.right.value
+        return 0
+    if isinstance(node, BinNode):
+        return max(_recurrence_depth(node.left), _recurrence_depth(node.right))
+    if isinstance(node, UnaryNode):
+        return _recurrence_depth(node.operand)
+    if isinstance(node, FuncNode):
+        return max((_recurrence_depth(arg) for arg in node.args), default=0)
+    return 0
+
+
 def _convert_result(result) -> int:
     """Convert an eval_node result to an integer."""
     if isinstance(result, Fraction):
@@ -247,9 +268,12 @@ class Formula:
     node: object
     lower_bound: Optional[int] = None
     is_recursive: bool = False
+    recurrence_depth: int = 0
 
     def __post_init__(self):
         self.is_recursive = _has_recurrence(self.node)
+        if self.is_recursive:
+            self.recurrence_depth = _recurrence_depth(self.node)
 
     def evaluate(self, n: int, terms: Optional[List[int]] = None, offset: int = 0) -> int:
         if self.is_recursive:
@@ -260,12 +284,15 @@ class Formula:
     def _evaluate_recursive(self, n: int, terms: Optional[List[int]], offset: int) -> int:
         if terms is None:
             raise ValueError("Recursive formula requires terms for evaluation")
-        # Build memo from known terms
+        # Seed memo with only the first recurrence_depth terms (the minimum
+        # needed to bootstrap the recurrence).  Remaining terms are computed
+        # by the recurrence itself, which is what we actually want to verify.
+        seed_count = self.recurrence_depth
         memo: dict = {}
-        for i, val in enumerate(terms):
-            memo[offset + i] = val
-        # Compute iteratively from the earliest missing index up to n
-        start = offset + len(terms)
+        for i in range(min(seed_count, len(terms))):
+            memo[offset + i] = terms[i]
+        # Compute iteratively from the first index after the seed
+        start = offset + seed_count
         for k in range(start, n + 1):
             if k in memo:
                 continue

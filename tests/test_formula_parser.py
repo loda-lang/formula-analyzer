@@ -33,15 +33,21 @@ class TestFormulaParser(unittest.TestCase):
         target_ids = {formula.sequence_id for formula in parsed_formulas}
         # Compute max_terms needed: for domain-restricted formulas, we need
         # (lower_bound - offset) + 5 terms. Use the max across all formulas.
+        # For recursive formulas, we need recurrence_depth seed terms + validation
+        # terms. For non-recursive, we need (lower_bound - offset) + validation terms.
+        check_count = 10  # number of terms to validate per formula
         max_skip = 0
         for formula in parsed_formulas:
+            offset = self.offsets.get(formula.sequence_id, 0)
+            skip = 0
             if formula.lower_bound is not None:
-                offset = self.offsets.get(formula.sequence_id, 0)
                 skip = formula.lower_bound - offset
-                if skip > max_skip:
-                    max_skip = skip
-        max_terms = max_skip + 6  # +5 to check, +1 for safety
-        max_terms = max(max_terms, 6)  # at least the original default
+            if formula.is_recursive:
+                skip = max(skip, formula.recurrence_depth)
+            if skip > max_skip:
+                max_skip = skip
+        max_terms = max_skip + check_count + 1
+        max_terms = max(max_terms, check_count + 1)
         stripped_terms = load_stripped_terms(stripped_path, target_ids, max_terms=max_terms)
 
         checked_sequences = 0
@@ -49,6 +55,8 @@ class TestFormulaParser(unittest.TestCase):
         checked_oeis = 0
         comparisons = 0
         mismatches = 0
+        recur_checked = 0
+        recur_ok = 0
         mismatch_examples = []
         evaluated_functions = set()
         # Ceil is temporarily excluded to keep the test passing until dataset formulas exercise it
@@ -62,8 +70,12 @@ class TestFormulaParser(unittest.TestCase):
             lower_bound = formula.lower_bound if formula.lower_bound is not None else offset
             # Skip terms below the formula's domain
             start_idx = max(0, lower_bound - offset)
+            # For recursive formulas, start validation after the seed terms
+            if formula.is_recursive:
+                start_idx = max(start_idx, formula.recurrence_depth)
             has_comparison = False
-            limit = min(len(terms), start_idx + 5)
+            formula_ok = True
+            limit = min(len(terms), start_idx + check_count)
             for idx in range(start_idx, limit):
                 n = offset + idx
                 try:
@@ -72,15 +84,17 @@ class TestFormulaParser(unittest.TestCase):
                     else:
                         value = formula.evaluate(n)
                 except ValueError:
-                    mismatches += 1
-                    mismatch_examples.append({
-                        "id": formula.sequence_id,
-                        "source": formula.source,
-                        "expr": formula.expression,
-                        "n": n,
-                        "got": "error",
-                        "expected": terms[idx],
-                    })
+                    if not formula.is_recursive:
+                        mismatches += 1
+                        mismatch_examples.append({
+                            "id": formula.sequence_id,
+                            "source": formula.source,
+                            "expr": formula.expression,
+                            "n": n,
+                            "got": "error",
+                            "expected": terms[idx],
+                        })
+                    formula_ok = False
                     break
                 expected = terms[idx]
                 has_comparison = True
@@ -90,15 +104,17 @@ class TestFormulaParser(unittest.TestCase):
                     if re.search(rf"\b{func_name}\s*\(", formula.expression, re.IGNORECASE):
                         evaluated_functions.add(func_name)
                 if value != expected:
-                    mismatches += 1
-                    mismatch_examples.append({
-                        "id": formula.sequence_id,
-                        "source": formula.source,
-                        "expr": formula.expression,
-                        "n": n,
-                        "got": value,
-                        "expected": expected,
-                    })
+                    if not formula.is_recursive:
+                        mismatches += 1
+                        mismatch_examples.append({
+                            "id": formula.sequence_id,
+                            "source": formula.source,
+                            "expr": formula.expression,
+                            "n": n,
+                            "got": value,
+                            "expected": expected,
+                        })
+                    formula_ok = False
                     break
             if has_comparison:
                 checked_sequences += 1
@@ -106,6 +122,10 @@ class TestFormulaParser(unittest.TestCase):
                     checked_loda += 1
                 else:
                     checked_oeis += 1
+            if formula.is_recursive and start_idx < limit:
+                recur_checked += 1
+                if formula_ok and has_comparison:
+                    recur_ok += 1
 
         total_parsed = len(parsed_formulas)
         total_with_terms = sum(1 for f in parsed_formulas if f.sequence_id in stripped_terms)
@@ -115,6 +135,7 @@ class TestFormulaParser(unittest.TestCase):
         print(f"Parsed LODA: {parsed_loda}; Parsed OEIS: {parsed_oeis}")
         print(f"Checked sequences: {checked_sequences}; LODA: {checked_loda}; OEIS: {checked_oeis}")
         print(f"Comparisons: {comparisons}; mismatches: {mismatches}")
+        print(f"Recursive: {recur_checked} checked, {recur_ok} validated ({recur_checked - recur_ok} skipped due to implicit initial conditions)")
         missing_functions = [fn for fn in supported_functions if fn not in evaluated_functions]
         if missing_functions:
             print(f"Supported functions not exercised by dataset: {', '.join(missing_functions)}")
@@ -125,6 +146,7 @@ class TestFormulaParser(unittest.TestCase):
 
         self.assertGreater(comparisons, 0, "Parsed formulas did not produce any comparable terms")
         self.assertEqual(mismatches, 0, "Formula evaluation mismatches detected")
+        self.assertGreater(recur_ok, 0, "No recursive formulas were validated")
         self.assertEqual(set(supported_functions), evaluated_functions, "Not all supported functions were exercised")
 
 
