@@ -1,4 +1,3 @@
-# Delegate to the original module to preserve full functionality without duplication.
 """
 Formula Analyzer for OEIS and LODA Formulas
 
@@ -10,208 +9,17 @@ than what's currently known in OEIS.
 import os
 import re
 from typing import Dict, List, Set, Tuple, Optional
-from dataclasses import dataclass
 from collections import defaultdict
-from enum import Enum
+
+from formula.types import FormulaType, ClassifiedFormula
+from formula.classifier import FormulaClassifier
+from formula.program_extractor import ProgramExtractor
 
 
-class FormulaType(Enum):
-	"""Categories of formula types."""
-	EXPLICIT_CLOSED = "explicit_closed"  # Direct formula with no recursion
-	COMPOSITE_EXPLICIT = "composite_explicit"  # Explicit but composed from other sequences / parity functions
-	RECURRENCE = "recurrence"  # Recursive formula (a(n) = f(a(n-1), ...))
-	GENERATING_FUNCTION = "generating_function"  # G.f., e.g.f.
-	SUM = "sum"  # Summation formula
-	PRODUCT = "product"  # Product formula
-	LIMIT = "limit"  # Limit formula
-	BINOMIAL = "binomial"  # Binomial coefficient formula
-	FLOOR_CEILING = "floor_ceiling"  # Floor/ceiling expressions
-	MODULAR = "modular"  # Modular arithmetic
-	MATRIX = "matrix"  # Matrix formula
-	CONGRUENCE = "congruence"  # Congruence relation
-	INTEGRAL = "integral"  # Integral formula
-	TRIGONOMETRIC = "trigonometric"  # Trig functions
-	CONTINUED_FRACTION = "continued_fraction"  # Continued fraction
-	SEQUENCE_REFERENCE = "sequence_reference"  # Uses other OEIS sequences in expression
-	UNKNOWN = "unknown"
-
-
-@dataclass
-class Formula:
-	"""Represents a single formula with metadata."""
-	sequence_id: str
-	text: str
-	source: str  # "oeis" or "loda"
-	types: Set[FormulaType]
+class FileParser:
+	"""Parses OEIS/LODA formula files and names files."""
     
-	def __hash__(self):
-		return hash((self.sequence_id, self.text, self.source))
-
-
-class FormulaClassifier:
-	"""Classifies formulas into different types."""
-    
-	# Pattern definitions for formula classification
-	PATTERNS = {
-		FormulaType.GENERATING_FUNCTION: [
-			r'\bg\.f\.',
-			r'\be\.g\.f\.',
-			r'generating function',
-			r'g\.f\.:',
-			r'e\.g\.f\.:',
-		],
-		FormulaType.RECURRENCE: [
-			r'a\(n\)\s*=.*a\(n[-+]\d+\)',
-			r'a\(n[-+]\d+\)',
-			r'recurrence',
-		],
-		FormulaType.SUM: [
-			r'sum_\{',
-			r'\\sum',
-			r'sum\{',
-			r'summation',
-		],
-		FormulaType.PRODUCT: [
-			r'product_\{',
-			r'\\prod',
-			r'product\{',
-		],
-		FormulaType.LIMIT: [
-			r'limit_\{',
-			r'\\lim',
-			r'limit\{',
-		],
-		FormulaType.BINOMIAL: [
-			r'binomial\(',
-			r'\\binom',
-			r'C\(n,k\)',
-		],
-		FormulaType.FLOOR_CEILING: [
-			r'floor\(',
-			r'ceiling\(',
-			r'\\lfloor',
-			r'\\rfloor',
-			r'\\lceil',
-			r'\\rceil',
-		],
-		FormulaType.MODULAR: [
-			r'\bmod\b',
-			r'\\equiv',
-			r'modulo',
-		],
-		FormulaType.CONGRUENCE: [
-			r'==\s*\d+\s*\(mod',
-			r'\\equiv.*\(mod',
-		],
-		FormulaType.INTEGRAL: [
-			r'integral_\{',
-			r'\\int',
-		],
-		FormulaType.TRIGONOMETRIC: [
-			r'\bsin\(',
-			r'\bcos\(',
-			r'\btan\(',
-			r'\bsec\(',
-		],
-		FormulaType.CONTINUED_FRACTION: [
-			r'continued fraction',
-			r'Q\(k\)',
-		],
-		FormulaType.MATRIX: [
-			r'matrix',
-			r'determinant',
-			r'\bdet\b',
-		],
-	}
-    
-	# LODA-specific patterns
-	LODA_PATTERNS = {
-		'has_recursion': r'a\(n[-+]\d+\)',
-		'has_helper_sequences': r'\b[b-z]\(n',
-		'has_floor': r'floor\(',
-		'has_truncate': r'truncate\(',
-		'has_sqrtint': r'sqrtint\(',
-		'has_binomial': r'binomial\(',
-		'has_modulo': r'%',
-		'has_power': r'\^',
-		'has_factorial': r'!',
-		'has_gcd': r'gcd\(',
-		'has_max_min': r'(max|min)\(',
-		'has_logint': r'logint\(',
-		'has_bitxor': r'bitxor\(',
-		'has_sumdigits': r'sumdigits\(',
-		'has_sequence_reference': r'A\d{6}'
-	}
-    
-	def classify_oeis(self, formula_text: str) -> Set[FormulaType]:
-		"""Classify an OEIS formula into types."""
-		types = set()
-		text_lower = formula_text.lower()
-        
-		for formula_type, patterns in self.PATTERNS.items():
-			for pattern in patterns:
-				if re.search(pattern, text_lower, re.IGNORECASE):
-					types.add(formula_type)
-					break
-        
-		# Explicit/composite explicit detection (no self-recursion)
-		if FormulaType.RECURRENCE not in types and re.search(r'a\(n\)\s*=', formula_text):
-			has_seq_ref = bool(re.search(r'A\d{6}', formula_text))
-			uses_parity = any(p in text_lower for p in ["hammingweight", "bit_count", "a010060", "a000120", "(-1)^", "mod 2", "% 2"])  # parity related
-			simple_poly_or_exp = bool(re.search(r'a\(n\)\s*=\s*[-+*/() n0-9^ ]+$', formula_text)) or bool(re.search(r'2\*n', formula_text))
-			if has_seq_ref or uses_parity:
-				types.add(FormulaType.SEQUENCE_REFERENCE)
-				types.add(FormulaType.COMPOSITE_EXPLICIT)
-			else:
-				types.add(FormulaType.EXPLICIT_CLOSED)
-        
-		return types if types else {FormulaType.UNKNOWN}
-    
-	def classify_loda(self, formula_text: str) -> Set[FormulaType]:
-		"""Classify a LODA formula into types."""
-		types = set()
-        
-		# Check if it has recursion
-		has_recursion = bool(re.search(self.LODA_PATTERNS['has_recursion'], formula_text))
-        
-		# Check for helper sequences (b(n), c(n), etc.)
-		has_helpers = bool(re.search(self.LODA_PATTERNS['has_helper_sequences'], formula_text))
-
-		# Check for sequence references to other OEIS sequences (Axxxxxx)
-		has_seq_ref = bool(re.search(self.LODA_PATTERNS['has_sequence_reference'], formula_text))
-        
-		if has_recursion:
-			types.add(FormulaType.RECURRENCE)
-        
-		# Sequence reference classification
-		if has_seq_ref:
-			types.add(FormulaType.SEQUENCE_REFERENCE)
-
-		# Check for explicit formulas (pure closed form: no recursion, helpers, or external sequence references)
-		if not has_recursion and not has_helpers:
-			if has_seq_ref:
-				types.add(FormulaType.COMPOSITE_EXPLICIT)
-			else:
-				types.add(FormulaType.EXPLICIT_CLOSED)
-        
-		# Check for specific operations
-		if re.search(self.LODA_PATTERNS['has_binomial'], formula_text):
-			types.add(FormulaType.BINOMIAL)
-        
-		if re.search(self.LODA_PATTERNS['has_floor'], formula_text) or \
-		   re.search(self.LODA_PATTERNS['has_truncate'], formula_text):
-			types.add(FormulaType.FLOOR_CEILING)
-        
-		if re.search(self.LODA_PATTERNS['has_modulo'], formula_text):
-			types.add(FormulaType.MODULAR)
-        
-		return types if types else {FormulaType.UNKNOWN}
-
-
-class FormulaParser:
-	"""Parses formula files and extracts formulas."""
-    
-	def parse_oeis_file(self, filepath: str) -> Dict[str, List[Formula]]:
+	def parse_oeis_file(self, filepath: str) -> Dict[str, List[ClassifiedFormula]]:
 		"""Parse OEIS formulas file with multi-line entries."""
 		formulas = defaultdict(list)
 		classifier = FormulaClassifier()
@@ -247,7 +55,7 @@ class FormulaParser:
         
 		return formulas
     
-	def _process_oeis_entry(self, seq_id: str, lines: List[str], formulas: Dict[str, List[Formula]], classifier):
+	def _process_oeis_entry(self, seq_id: str, lines: List[str], formulas: Dict[str, List[ClassifiedFormula]], classifier):
 		"""Process a single OEIS entry with potentially multiple lines."""
 		# Process each line individually so explicit formulas are not masked by recurrences.
 		skip_markers = {'From _', '(End)', 'Comment from', 'Conjectures from',
@@ -261,7 +69,7 @@ class FormulaParser:
 				continue
 
 			types = classifier.classify_oeis(line)
-			formula = Formula(
+			formula = ClassifiedFormula(
 				sequence_id=seq_id,
 				text=line,
 				source='oeis',
@@ -269,7 +77,7 @@ class FormulaParser:
 			)
 			formulas[seq_id].append(formula)
     
-	def parse_loda_file(self, filepath: str) -> Dict[str, Formula]:
+	def parse_loda_file(self, filepath: str) -> Dict[str, ClassifiedFormula]:
 		"""Parse LODA formulas file (one formula per sequence)."""
 		formulas = {}
 		classifier = FormulaClassifier()
@@ -287,7 +95,7 @@ class FormulaParser:
 					formula_text = match.group(2)
                     
 					types = classifier.classify_loda(formula_text)
-					formula = Formula(
+					formula = ClassifiedFormula(
 						sequence_id=seq_id,
 						text=formula_text,
 						source='loda',
@@ -315,235 +123,21 @@ class FormulaParser:
         
 		return names
 
-	def parse_oeis_programs_file(self, filepath: str) -> Dict[str, List[Formula]]:
+	def parse_oeis_programs_file(self, filepath: str) -> Dict[str, List[ClassifiedFormula]]:
 		"""Parse OEIS programs file and extract formula-like expressions.
 
-		The file uses the same multi-line format as the formulas file:
-		header ``Axxxxxx: (LANG) code``, continuation with 2-space indent.
-
-		Only lines that look like formulas are kept (e.g. PARI ``a(n)=expr``,
-		Maple direct expressions, Mathematica ``a[n_]`` definitions).
+		Delegates to :class:`ProgramExtractor` for the actual extraction.
 		"""
-		formulas: Dict[str, List[Formula]] = defaultdict(list)
-		classifier = FormulaClassifier()
-
-		current_seq_id: Optional[str] = None
-		current_lines: List[str] = []
-
-		def _flush() -> None:
-			if current_seq_id and current_lines:
-				self._process_program_entry(current_seq_id, current_lines, formulas, classifier)
-
-		with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-			for line in f:
-				match = re.match(r'(A\d{6}):\s*(.+)', line)
-				if match:
-					_flush()
-					current_seq_id = match.group(1)
-					current_lines = [match.group(2)]
-				elif line.startswith('  ') and current_seq_id:
-					current_lines.append(line[2:])
-				elif not line.strip():
-					_flush()
-					current_seq_id = None
-					current_lines = []
-			_flush()
-
-		return formulas
-
-	# Patterns for extracting formulas from OEIS program blocks.
-	_PARI_FORMULA_RE = re.compile(
-		r'^\s*(?:a\(n\)|[a-z]\(n\))\s*=\s*(.+)',
-		re.IGNORECASE,
-	)
-	_MATHEMATICA_FORMULA_RE = re.compile(
-		r'^\s*(?:a\[n_?\]|Table\[)\s*:?=\s*(.+)',
-		re.IGNORECASE,
-	)
-
-	def _process_program_entry(self, seq_id: str, lines: List[str],
-							   formulas: Dict[str, List[Formula]],
-							   classifier: FormulaClassifier) -> None:
-		"""Extract formula-like expressions from a program block.
-
-		A single entry may contain multiple language blocks.  Each block
-		starts with a ``(LANG)`` tag, either on the header line or on a
-		continuation line.
-		"""
-		if not lines:
-			return
-
-		# Split lines into per-language blocks.
-		blocks: List[Tuple[str, List[str]]] = []  # (lang, lines)
-		current_lang = ''
-		current_block: List[str] = []
-
-		for line in lines:
-			m = re.match(r'\((\w+)\)\s*(.*)', line)
-			if m:
-				# Start of a new language block
-				if current_block or current_lang:
-					blocks.append((current_lang, current_block))
-				current_lang = m.group(1).lower()
-				rest = m.group(2).strip()
-				current_block = [rest] if rest else []
-			else:
-				current_block.append(line)
-
-		if current_block or current_lang:
-			blocks.append((current_lang, current_block))
-
-		for lang, block_lines in blocks:
-			extracted: List[str] = []
-
-			if lang == 'pari':
-				extracted = self._extract_pari_formulas(block_lines)
-			elif lang == 'maple':
-				extracted = self._extract_maple_formulas(block_lines)
-			elif lang in ('mathematica', 'mma'):
-				extracted = self._extract_mathematica_formulas(block_lines)
-			elif lang == 'magma':
-				extracted = self._extract_magma_formulas(block_lines)
-			elif lang == 'python':
-				extracted = self._extract_python_formulas(block_lines)
-			else:
-				# Generic: look for a(n)=... patterns
-				for bline in block_lines:
-					m = self._PARI_FORMULA_RE.match(bline.strip())
-					if m:
-						extracted.append('a(n) = ' + m.group(1).rstrip(';').strip())
-
-			for expr in extracted:
-				types = classifier.classify_oeis(expr)
-				formula = Formula(
-					sequence_id=seq_id,
-					text=expr,
-					source='oeis_prog',
-					types=types,
-				)
-				formulas[seq_id].append(formula)
-
-	def _extract_pari_formulas(self, lines: List[str]) -> List[str]:
-		"""Extract formula-like expressions from PARI programs."""
-		results: List[str] = []
-		for line in lines:
-			# Strip trailing comments: \\ ... or // ...
-			line = re.sub(r'\s*\\\\.*$', '', line)
-			line = re.sub(r'\s*//.*$', '', line)
-			line = line.strip().rstrip(';').strip()
-			if not line or line.startswith('\\\\') or line.startswith('/*'):
-				continue
-			m = self._PARI_FORMULA_RE.match(line)
-			if m:
-				expr = m.group(1).rstrip(';').strip()
-				# Skip if it contains control flow (multi-statement programs)
-				if any(kw in expr for kw in ['if(', 'while(', 'for(', 'forstep(', 'my(', 'local(']):
-					continue
-				results.append('a(n) = ' + expr)
-		return results
-
-	def _extract_maple_formulas(self, lines: List[str]) -> List[str]:
-		"""Extract formula-like expressions from Maple programs."""
-		results: List[str] = []
-		for line in lines:
-			line = line.strip().rstrip(';').rstrip(':').strip()
-			if not line:
-				continue
-			# Maple: a := n -> expr  or  a(n) := expr
-			m = re.match(r'^\s*\w+\s*:=\s*(?:n\s*->|proc\(n\))\s*(.+)', line)
-			if m:
-				expr = m.group(1).strip()
-				if 'proc' in expr or 'do' in expr or 'if' in expr:
-					continue
-				expr = expr.rstrip('end').strip()
-				results.append('a(n) = ' + expr)
-				continue
-			# Direct formula: a(n) = expr
-			m = self._PARI_FORMULA_RE.match(line)
-			if m:
-				expr = m.group(1).strip()
-				if 'if' not in expr and 'do' not in expr:
-					results.append('a(n) = ' + expr)
-				continue
-			# Bare polynomial expression (e.g. 57/7*n^8+36*n^7+...)
-			if re.match(r'^[\d\s\+\-\*/\^n\(\)\.]+$', line) and 'n' in line:
-				results.append('a(n) = ' + line)
-		return results
-
-	def _extract_mathematica_formulas(self, lines: List[str]) -> List[str]:
-		"""Extract formula-like expressions from Mathematica programs."""
-		results: List[str] = []
-		for line in lines:
-			line = line.strip().rstrip(';').strip()
-			if not line:
-				continue
-			m = re.match(r'^\s*a\[n_?\]\s*:?=\s*(.+)', line)
-			if m:
-				expr = m.group(1).strip()
-				if any(kw in expr for kw in ['If[', 'Which[', 'Do[', 'Module[']):
-					continue
-				results.append('a(n) = ' + expr)
-		return results
-
-	def _extract_magma_formulas(self, lines: List[str]) -> List[str]:
-		"""Extract formula-like expressions from Magma programs."""
-		results: List[str] = []
-		for line in lines:
-			# Strip trailing comments
-			line = re.sub(r'\s*//.*$', '', line)
-			line = line.strip().rstrip(';').strip()
-			if not line:
-				continue
-			# Pattern: [expr : n in [0..N]]
-			m = re.match(r'^\s*\[(.+?)\s*:\s*n\s+in\s+\[', line)
-			if m:
-				expr = m.group(1).strip()
-				if 'if' not in expr.lower() and 'for' not in expr.lower():
-					results.append('a(n) = ' + expr)
-				continue
-			# Pattern: func<n | expr>
-			m = re.match(r'^\s*func<\s*n\s*\|\s*(.+?)>', line)
-			if m:
-				expr = m.group(1).strip()
-				results.append('a(n) = ' + expr)
-				continue
-			m = self._PARI_FORMULA_RE.match(line)
-			if m:
-				expr = m.group(1).strip()
-				if 'if' not in expr.lower() and 'for' not in expr.lower():
-					results.append('a(n) = ' + expr)
-		return results
-
-	def _extract_python_formulas(self, lines: List[str]) -> List[str]:
-		"""Extract formula-like expressions from Python programs."""
-		results: List[str] = []
-		for line in lines:
-			line = line.strip()
-			if not line:
-				continue
-			# lambda n: expr
-			m = re.match(r'.*lambda\s+n\s*:\s*(.+)', line)
-			if m:
-				expr = m.group(1).strip()
-				if 'if' not in expr and 'for' not in expr:
-					results.append('a(n) = ' + expr)
-				continue
-			# def a(n): return expr
-			m = re.match(r'^\s*def\s+\w+\(n\):\s*return\s+(.+)', line)
-			if m:
-				expr = m.group(1).strip()
-				if 'if' not in expr and 'for' not in expr:
-					results.append('a(n) = ' + expr)
-		return results
+		return ProgramExtractor().parse_oeis_programs_file(filepath)
 
 
 class FormulaComparator:
 	"""Compares LODA formulas against OEIS formulas to find interesting ones."""
 
-	def __init__(self, oeis_formulas: Dict[str, List[Formula]],
-				 loda_formulas: Dict[str, Formula],
+	def __init__(self, oeis_formulas: Dict[str, List[ClassifiedFormula]],
+				 loda_formulas: Dict[str, ClassifiedFormula],
 				 names: Dict[str, str],
-				 oeis_programs: Optional[Dict[str, List[Formula]]] = None):
+				 oeis_programs: Optional[Dict[str, List[ClassifiedFormula]]] = None):
 		self.oeis_formulas = oeis_formulas
 		self.loda_formulas = loda_formulas
 		self.names = names
@@ -602,9 +196,9 @@ class FormulaComparator:
 			types.add(FormulaType.EXPLICIT_CLOSED)
 		return types
 
-	def find_new_formulas(self) -> List[Tuple[Formula, Set[FormulaType], str]]:
+	def find_new_formulas(self) -> List[Tuple[ClassifiedFormula, Set[FormulaType], str]]:
 		"""Find LODA formulas that provide new formula types."""
-		results: List[Tuple[Formula, Set[FormulaType], str]] = []
+		results: List[Tuple[ClassifiedFormula, Set[FormulaType], str]] = []
 		for seq_id, loda_formula in self.loda_formulas.items():
 			oeis_formulas = self.oeis_formulas.get(seq_id, [])
 			name_types = self._types_from_name(seq_id)
@@ -729,7 +323,7 @@ class FormulaComparator:
 			return f"LODA provides new formula types: {type_names}"
 		return None
 
-	def _is_equivalent(self, loda_formula: Formula, oeis_formulas: List[Formula]) -> bool:
+	def _is_equivalent(self, loda_formula: ClassifiedFormula, oeis_formulas: List[ClassifiedFormula]) -> bool:
 		"""Rudimentary equivalence: detect parity-based linear forms already present in OEIS."""
 		text = loda_formula.text.replace(' ', '')
 		# Canonical substitutions
@@ -749,7 +343,7 @@ class FormulaComparator:
 				return True
 		return False
 
-	def annotate_equivalences(self, results: List[Tuple[Formula, Set[FormulaType], str]]) -> List[Tuple[Formula, Set[FormulaType], str]]:
+	def annotate_equivalences(self, results: List[Tuple[ClassifiedFormula, Set[FormulaType], str]]) -> List[Tuple[ClassifiedFormula, Set[FormulaType], str]]:
 		"""Post-process results: adjust reason if formula equivalent to OEIS explicit."""
 		adjusted = []
 		for formula, new_types, reason in results:
@@ -763,7 +357,7 @@ class FormulaComparator:
 		"""Get the name of a sequence."""
 		return self.names.get(seq_id, "Unknown sequence")
     
-	def generate_report(self, results: List[Tuple[Formula, Set[FormulaType], str]], 
+	def generate_report(self, results: List[Tuple[ClassifiedFormula, Set[FormulaType], str]], 
 					   max_results: int = 100) -> str:
 		"""Generate a human-readable report of interesting formulas."""
 		lines = []
@@ -816,7 +410,7 @@ def analyze_formulas(oeis_file: str, loda_file: str, names_file: str,
 		programs_file: Optional path to programs-oeis.txt
 	"""
 	print("Parsing OEIS formulas...")
-	parser = FormulaParser()
+	parser = FileParser()
 	oeis_formulas = parser.parse_oeis_file(oeis_file)
 	print(f"  Found formulas for {len(oeis_formulas)} sequences")
     
@@ -828,7 +422,7 @@ def analyze_formulas(oeis_file: str, loda_file: str, names_file: str,
 	names = parser.parse_names_file(names_file)
 	print(f"  Found {len(names)} sequence names")
 
-	oeis_programs: Dict[str, List[Formula]] = {}
+	oeis_programs: Dict[str, List[ClassifiedFormula]] = {}
 	if programs_file and os.path.exists(programs_file):
 		print("Parsing OEIS programs...")
 		oeis_programs = parser.parse_oeis_programs_file(programs_file)

@@ -57,21 +57,22 @@ This is a Python tool that analyzes and compares mathematical formulas from OEIS
 
 ## Key Classes and Their Roles
 
-### `FormulaType` (Enum)
+### `FormulaType` (Enum in `formula/types.py`)
 - Defines all recognized formula categories
 - Add new types here when extending classification
 
-### `Formula` (dataclass in `formula/analyzer.py`)
+### `ClassifiedFormula` (dataclass in `formula/types.py`)
 - Immutable representation of a classified formula
 - Fields: `sequence_id`, `text`, `source`, `types`
 - Implement `__hash__` for set operations
+- Aliased as `Formula` in `formula/analyzer.py` for backward compatibility
 
 ### `Formula` (dataclass in `formula/formula.py`)
 - Parsed formula with evaluable AST
 - Fields: `sequence_id`, `source`, `expression`, `node`, `lower_bound`
 - `evaluate(n)` computes the formula value at a given n
 
-### `FormulaClassifier`
+### `FormulaClassifier` (`formula/classifier.py`)
 - Pattern-based classification using regex
 - `PATTERNS` dict maps types to regex lists
 - `classify_oeis()` and `classify_loda()` methods handle different syntaxes
@@ -82,11 +83,17 @@ This is a Python tool that analyzes and compares mathematical formulas from OEIS
 - `ALL_FUNCTIONS`: frozenset of all supported functions (default when `allowed_functions` is not specified)
 - `allowed_functions` parameter restricts which functions the tokenizer accepts; callers pass a subset (e.g., `OEIS_ALLOWED_FUNCTIONS`) to limit OEIS parsing
 
-### `FormulaParser` (`formula/analyzer.py`)
+### `FileParser` (`formula/analyzer.py`)
 - File-level parser: reads and parses OEIS/LODA input files
 - Handles multi-line OEIS entries (indentation-based)
 - One formula per line for LODA
 - Uses `defaultdict(list)` for OEIS to accumulate multiple formulas
+- Aliased as `FormulaParser` in `formula/analyzer.py` for backward compatibility
+
+### `ProgramExtractor` (`formula/program_extractor.py`)
+- Extracts formula-like expressions from OEIS program blocks
+- Supports PARI, Maple, Mathematica, Magma, and Python
+- Called by `FileParser.parse_oeis_programs_file()` via delegation
 
 ### `FormulaComparator`
 - Core comparison logic

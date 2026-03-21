@@ -3,7 +3,8 @@
 Script to run formula analysis and generate detailed reports.
 """
 
-from formula.analyzer import analyze_formulas, FormulaType
+from formula.analyzer import analyze_formulas
+from formula.types import FormulaType
 from formula.annotate import generate_parsed_loda_file, generate_parsed_oeis_file
 from formula.data_fetcher import prepare_data, DataPaths
 import argparse
