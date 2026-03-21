@@ -13,10 +13,8 @@ MAX_RECURRENCE_DEPTH = 50
 
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
-    # OEIS formulas with incorrect constant terms
-    "A244501",   # formula has wrong constant term: 6 should be 63; all values off by -57; documented in pending_oeis_submissions.md
-    # Parity-specific formulas missing parity restrictions
-    "A299256",   # two formulas missing parity restrictions: (9*n^2-1)/2 for odd n, 9*n^2/2 for even n; documented in pending_oeis_submissions.md
+    # Parity-specific formulas: correction published (parity markers added) but recurrence formula fails diagnostic evaluation
+    "A299256",   # parity corrections published; recurrence a(n)=2*a(n-1)-2*a(n-3)+a(n-4) fails standalone evaluation
     # Binomial formulas with fractional arguments and large gamma values — float precision issue
     "A364517",   # binomial(9*n/2, 2*n) loses precision at n>=3 due to large gamma values
     "A347854",   # binomial with 3*n/2 argument loses precision at n>=5
@@ -24,13 +22,14 @@ DENYLIST_OEIS: set[str] = {
     "A347856",   # binomial with 3*n/2 argument loses precision at n>=5
     "A347857",   # binomial with 5*n/2 argument loses precision at n>=5
     "A347858",   # binomial with 9*n/2 argument loses precision at n>=5
-    # Binomial formulas missing domain restrictions
-    "A113127",   # binomial sum formula needs domain restriction for n>=2; produces wrong values at n=0,1; documented in pending_oeis_submissions.md
-    # OEIS entries with both correct and incorrect formulas (awaiting incorrect formula deletion)
-    "A056118",   # Greubel formula 11*C(n+5,5)-8*C(n+4,4) has wrong coefficient: -8 should be -10; entry has correct formula too; awaiting incorrect formula deletion
+    # Coefficient correction published but attribution text blocks parsing; recurrence fails diagnostic evaluation
+    "A056118",   # coefficient corrected (-8 -> -10) on 2026-03-08; corrected formula not parseable due to [corrected by ...] suffix; recurrence fails standalone evaluation
 }
 
-DENYLIST_LODA: set[str] = set()  # Currently empty - all issues resolved or formulas rejected by parser
+DENYLIST_LODA: set[str] = {
+    "A327094",   # formula incorrect at n=9 (gives 24, expected 26); removal triggered 2026-03-21
+    "A394266",   # offset mismatch: LODA formula at offset 0 but OEIS uses offset 1; removal triggered 2026-03-21
+}
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)
 OEIS_HEADER_RE = re.compile(r"^(A\d{6}):\s*(.+)$")
