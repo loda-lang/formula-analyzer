@@ -20,8 +20,6 @@ DENYLIST_OEIS: set[str] = {
     "A347856",   # binomial with 3*n/2 argument loses precision at n>=5
     "A347857",   # binomial with 5*n/2 argument loses precision at n>=5
     "A347858",   # binomial with 9*n/2 argument loses precision at n>=5
-    # Coefficient correction published but attribution text blocks parsing; recurrence fails diagnostic evaluation
-    "A056118",   # coefficient corrected (-8 -> -10) on 2026-03-08; corrected formula not parseable due to [corrected by ...] suffix; recurrence fails standalone evaluation
 }
 
 DENYLIST_LODA: set[str] = {
