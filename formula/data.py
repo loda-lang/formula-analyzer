@@ -13,8 +13,6 @@ MAX_RECURRENCE_DEPTH = 50
 
 # Temporary deny lists for formulas that assume incorrect offsets or are misleading/non-explicit
 DENYLIST_OEIS: set[str] = {
-    # Parity-specific formulas: correction published (parity markers added) but recurrence formula fails diagnostic evaluation
-    "A299256",   # parity corrections published; recurrence a(n)=2*a(n-1)-2*a(n-3)+a(n-4) fails standalone evaluation
     # Binomial formulas with fractional arguments and large gamma values — float precision issue
     "A364517",   # binomial(9*n/2, 2*n) loses precision at n>=3 due to large gamma values
     "A347854",   # binomial with 3*n/2 argument loses precision at n>=5
