@@ -19,6 +19,9 @@ from typing import Callable, Dict, List, Optional
 # URL hosting the OEIS formulas export
 OEIS_FORMULAS_URL = "https://api.loda-lang.org/v2/sequences/data/oeis/formulas.gz"
 
+# URL hosting the OEIS programs export
+OEIS_PROGRAMS_URL = "https://api.loda-lang.org/v2/sequences/data/oeis/programs.gz"
+
 CommandRunner = Callable[[List[str], Optional[Path]], None]
 Downloader = Callable[[Path], None]
 Exporter = Callable[[Path], None]
@@ -50,6 +53,10 @@ class DataPaths:
     @property
     def formulas_oeis(self) -> Path:
         return self.data_dir / "formulas-oeis.txt"
+
+    @property
+    def programs_oeis(self) -> Path:
+        return self.data_dir / "programs-oeis.txt"
 
 
 @dataclass
@@ -160,6 +167,17 @@ def prepare_data(
     else:
         _mark_skipped("formulas-oeis.txt already present")
 
+    # Download OEIS programs.
+    programs_download_fn = downloader or _download_oeis_programs
+    if force or not paths.programs_oeis.exists():
+        if dry_run:
+            _mark_skipped(f"would download {OEIS_PROGRAMS_URL} -> {paths.programs_oeis}")
+        else:
+            programs_download_fn(paths.programs_oeis)
+            _mark_created(paths.programs_oeis)
+    else:
+        _mark_skipped("programs-oeis.txt already present")
+
     return FetchReport(created=created, skipped=skipped, commands=commands)
 
 
@@ -186,9 +204,18 @@ def _download_oeis_formulas(dst: Path) -> None:
     dst.write_text(content, encoding="utf-8")
 
 
+def _download_oeis_programs(dst: Path) -> None:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    with urllib.request.urlopen(OEIS_PROGRAMS_URL) as response:
+        with gzip.GzipFile(fileobj=response) as gz:
+            content = gz.read().decode("utf-8")
+    dst.write_text(content, encoding="utf-8")
+
+
 __all__ = [
     "prepare_data",
     "FetchReport",
     "DataPaths",
     "OEIS_FORMULAS_URL",
+    "OEIS_PROGRAMS_URL",
 ]

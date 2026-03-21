@@ -46,6 +46,7 @@ def main():
     oeis_file = str(paths.formulas_oeis)
     loda_file = str(paths.formulas_loda)
     names_file = str(paths.names)
+    programs_file = str(paths.programs_oeis)
     output_file = str(base_dir / "results/interesting_formulas.txt")
     parsed_loda_file = str(base_dir / "results/parsed-formulas-loda.txt")
     parsed_oeis_file = str(base_dir / "results/parsed-formulas-oeis.txt")
@@ -70,7 +71,8 @@ def main():
     print()
     
     # Run analysis
-    results, comparator = analyze_formulas(oeis_file, loda_file, names_file, output_file)
+    results, comparator = analyze_formulas(oeis_file, loda_file, names_file, output_file,
+                                           programs_file=programs_file)
     
     # Generate statistics
     print("\n" + "=" * 80)
