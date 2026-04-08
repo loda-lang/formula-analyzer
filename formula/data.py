@@ -23,8 +23,8 @@ DENYLIST_OEIS: set[str] = {
 }
 
 DENYLIST_LODA: set[str] = {
+    "A025744",   # offset mismatch: LODA program uses offset 1 but OEIS uses offset 0; removal triggered 2026-04-08
     "A327094",   # formula incorrect at n=9 (gives 24, expected 26); removal triggered 2026-03-21
-    "A394266",   # offset mismatch: LODA formula at offset 0 but OEIS uses offset 1; removal triggered 2026-03-21
 }
 
 LODA_LINE_RE = re.compile(r"^(A\d{6}):\s*a\(n\)\s*=\s*(.+)$", re.IGNORECASE)
