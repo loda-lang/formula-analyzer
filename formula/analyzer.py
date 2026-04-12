@@ -58,10 +58,13 @@ class FileParser:
 	def _process_oeis_entry(self, seq_id: str, lines: List[str], formulas: Dict[str, List[ClassifiedFormula]], classifier):
 		"""Process a single OEIS entry with potentially multiple lines."""
 		# Process each line individually so explicit formulas are not masked by recurrences.
-		skip_markers = {'From _', '(End)', 'Comment from', 'Conjectures from',
+		skip_markers = {'From _', 'Comment from', 'Conjectures from',
 						'[Table from', '[table from', '----------'}
 
 		for line in lines:
+			# Strip (Start)/(End) block markers so formulas on those lines are preserved
+			line = re.sub(r'\s*\(Start\)\s*', ' ', line)
+			line = re.sub(r'\s*\(End\)\s*', ' ', line)
 			line = line.strip()
 			if not line:
 				continue
