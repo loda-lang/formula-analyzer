@@ -23,6 +23,7 @@ class FormulaType(Enum):
 	TRIGONOMETRIC = "trigonometric"  # Trig functions
 	CONTINUED_FRACTION = "continued_fraction"  # Continued fraction
 	SEQUENCE_REFERENCE = "sequence_reference"  # Uses other OEIS sequences in expression
+	LOOKUP_TABLE = "lookup_table"  # Trivial enumeration: a(n) = c0*(n==0) + c1*(n==1) + ...
 	UNKNOWN = "unknown"
 
 

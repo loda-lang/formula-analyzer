@@ -163,4 +163,8 @@ class FormulaClassifier:
 		if re.search(self.LODA_PATTERNS['has_modulo'], formula_text):
 			types.add(FormulaType.MODULAR)
 
+		# Detect trivial lookup tables: a(n) = c0*(n==0) + c1*(n==1) + ...
+		if re.match(r'a\(n\)\s*=\s*(\d+\*)?\(n==\d+\)(\s*\+\s*(\d+\*)?\(n==\d+\))*$', formula_text):
+			types.add(FormulaType.LOOKUP_TABLE)
+
 		return types if types else {FormulaType.UNKNOWN}

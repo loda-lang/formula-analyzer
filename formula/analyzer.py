@@ -280,6 +280,10 @@ class FormulaComparator:
 		"""Determine if a LODA formula is interesting compared to OEIS."""
 		name_has_explicit = FormulaType.EXPLICIT_CLOSED in name_types or FormulaType.COMPOSITE_EXPLICIT in name_types
 
+		# Lookup tables (trivial case-by-case enumeration of finite sequences) are never interesting
+		if FormulaType.LOOKUP_TABLE in loda_types:
+			return None
+
 		# Helper: treat any explicit form present in OEIS types as explicit coverage
 		oeis_has_explicit = any(t in oeis_types for t in [FormulaType.EXPLICIT_CLOSED, FormulaType.COMPOSITE_EXPLICIT])
 		has_rational_gf = self._has_rational_gf(seq_id)
