@@ -32,7 +32,7 @@ description: "Use when working with denylists, offset handling, formula validati
    - Solution: Refresh via `mcp_loda_refresh_sequence`; add to denylist with refresh date in comment. Remove from denylist once updated data is available locally (can take multiple days).
 2. **Offset mismatch**: LODA program uses incorrect offset, producing a shifted formula
    - Verify by running `loda export -o loda <ID>` and checking the `#offset` line against the OEIS offset in `data/offsets`
-   - Solution: Submit program removal via `mcp_loda_submit` (mode `remove`, type `program`); add to `DENYLIST_LODA` with removal trigger date in comment. Remove from denylist once the program is removed and the formula file is regenerated (can take multiple days).
+   - Solution: Submit program removal via `mcp_loda_submit` (mode `remove`, type `program`) AND trigger a sequence refresh via `mcp_loda_submit` (mode `refresh`, type `sequence`); add to `DENYLIST_LODA` with removal trigger date in comment. Remove from denylist once the program is removed and the formula file is regenerated (can take multiple days).
 3. **OEIS formula errors**: Formula text has typos, wrong domain bounds, missing factors, or off-by-one errors
    - Example: formula missing `/2`, or domain `for n >= k` off by 1
    - Solution: Submit a correction to OEIS; add to `DENYLIST_OEIS` until corrected and refreshed. Track the correction submission date in the denylist comment. Once the correction is published and local data is refreshed, remove from denylist.
@@ -47,10 +47,10 @@ description: "Use when working with denylists, offset handling, formula validati
 **Location**: `formula/data.py`
 
 **DENYLIST_LODA**:
-- Sequences where the LODA program uses an incorrect offset, causing the exported formula to be shifted relative to OEIS terms
-- LODA formulas are generated from LODA programs; if the program's `#offset` doesn't match the OEIS offset, the formula will be wrong
-- Verify with `loda export -o loda <ID>` and compare the `#offset` line against `data/offsets`
-- Trigger program removal via `mcp_loda_submit` (mode `remove`, type `program`) and track the removal date in the denylist comment
+- Sequences where the LODA program produces incorrect values or uses an incorrect offset, causing the exported formula to not match OEIS terms
+- LODA formulas are generated from LODA programs; if the program's `#offset` doesn't match the OEIS offset, the formula will be wrong; if the program computes wrong values, the formula will also be wrong
+- For offset issues: verify with `loda export -o loda <ID>` and compare the `#offset` line against `data/offsets`
+- Always trigger both: program removal via `mcp_loda_submit` (mode `remove`, type `program`) AND sequence refresh via `mcp_loda_submit` (mode `refresh`, type `sequence`); track the removal date in the denylist comment
 
 **DENYLIST_OEIS**:
 - Sequences where OEIS formula has validation issues
