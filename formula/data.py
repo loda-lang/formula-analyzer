@@ -23,6 +23,7 @@ DENYLIST_OEIS: set[str] = {
 }
 
 DENYLIST_LODA: set[str] = {
+    "A025727",   # offset mismatch: LODA program uses offset 1 but OEIS uses offset 0; removal triggered 2026-05-03
     "A025744",   # offset mismatch: LODA program uses offset 1 but OEIS uses offset 0; removal triggered 2026-04-08
     "A327094",   # formula incorrect at n=9 (gives 24, expected 26); removal triggered 2026-03-21
     "A378831",   # formula incorrect at n=10 (gives 22, expected 23); removal triggered 2026-04-18
