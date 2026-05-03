@@ -48,9 +48,11 @@ def main():
     loda_file = str(paths.formulas_loda)
     names_file = str(paths.names)
     programs_file = str(paths.programs_oeis)
-    output_file = str(base_dir / "results/interesting_formulas.txt")
-    parsed_loda_file = str(base_dir / "results/parsed-formulas-loda.txt")
-    parsed_oeis_file = str(base_dir / "results/parsed-formulas-oeis.txt")
+    results_dir = base_dir / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    output_file = str(results_dir / "interesting_formulas.txt")
+    parsed_loda_file = str(results_dir / "parsed-formulas-loda.txt")
+    parsed_oeis_file = str(results_dir / "parsed-formulas-oeis.txt")
 
     missing = [p for p in [oeis_file, loda_file, names_file] if not os.path.exists(p)]
     if missing:
