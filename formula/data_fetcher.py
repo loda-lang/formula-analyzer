@@ -126,11 +126,11 @@ def prepare_data(
     }
     core_needed = force or any(not p.exists() for p in core_files.values())
     if core_needed and run_if_missing:
+        _maybe_run_update()
         if not seqs_dir.exists():
             raise FileNotFoundError(
-                f"Expected OEIS exports under {seqs_dir}; run loda update manually."
+                f"Expected OEIS exports under {seqs_dir} after running 'loda update'."
             )
-        _maybe_run_update()
         for key, dst in core_files.items():
             src = seqs_dir / key
             if not src.exists():
