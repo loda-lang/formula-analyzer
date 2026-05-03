@@ -162,6 +162,54 @@ class FormulaComparator:
 		self.NAME_MULTIPLES_PATTERN = re.compile(r'\bmultiples of\s+\d+\b', re.IGNORECASE)
 		# Detect floor/ceiling forms in titles like "Floor( n(n-1)/7 )"
 		self.NAME_FLOOR_CEILING_PATTERN = re.compile(r'\bfloor\(|\bceiling\(', re.IGNORECASE)
+		# Piecewise-by-residue closed form: LHS like a(2n), a(3*n+1), a(4n-3), etc.
+		# Captures (coefficient, optional offset). Used to detect complete piecewise
+		# closed forms covering all residues mod k (e.g. A194770: a(3n), a(3n+1), a(3n+2)).
+		self.PIECEWISE_LHS_PATTERN = re.compile(
+			r'\ba\(\s*(\d+)\s*\*?\s*n\s*([+\-]\s*\d+)?\s*\)\s*=',
+			re.IGNORECASE,
+		)
+		# Detect a(n), a(n-k) or a(n+k) on the RHS — disqualifies a "closed form" line as recursive.
+		self.RHS_RECURRENCE_PATTERN = re.compile(r'\ba\(\s*n\s*([+\-]\s*\d+\s*)?\)', re.IGNORECASE)
+
+	def _piecewise_explicit_types(self, seq_id: str) -> Set[FormulaType]:
+		"""Detect a complete piecewise-by-residue closed form on the OEIS side.
+
+		Examples this catches:
+		- A194770: ``a(3*n+1) = (3*n)!, a(3*n+2) = -(3*n+1)!, a(3*n) = 0`` (one line, k=3, all residues)
+		- A152668: ``a(2n) = (n+1)(2n)!/2`` and ``a(2n+1) = n(n+2)(2n)!`` across two lines (k=2, both residues)
+
+		Returns ``{EXPLICIT_CLOSED}`` (or ``{COMPOSITE_EXPLICIT}`` when any covered RHS references
+		another OEIS sequence) when some coefficient ``k`` has all ``k`` residues covered by
+		non-recursive RHS expressions; otherwise an empty set.
+		"""
+		# Map coefficient k -> set of residues r seen, plus flag whether any RHS used a sequence ref
+		residues_by_k: Dict[int, Set[int]] = defaultdict(set)
+		any_seq_ref_by_k: Dict[int, bool] = defaultdict(bool)
+		for f in self.oeis_formulas.get(seq_id, []):
+			text = f.text
+			for match in self.PIECEWISE_LHS_PATTERN.finditer(text):
+				k = int(match.group(1))
+				if k < 2 or k > 12:  # ignore k=1 (trivial) and pathologically large k
+					continue
+				offset_part = (match.group(2) or '+0').replace(' ', '')
+				try:
+					r = int(offset_part) % k
+				except ValueError:
+					continue
+				# Inspect the RHS for this LHS: from match.end() up to the next LHS or end-of-text.
+				next_lhs = self.PIECEWISE_LHS_PATTERN.search(text, match.end())
+				rhs = text[match.end():next_lhs.start()] if next_lhs else text[match.end():]
+				# Reject if the RHS itself contains a recurrence reference (a(n-j) / a(n+j)).
+				if self.RHS_RECURRENCE_PATTERN.search(rhs):
+					continue
+				residues_by_k[k].add(r)
+				if re.search(r'A\d{6}', rhs):
+					any_seq_ref_by_k[k] = True
+		for k, residues in residues_by_k.items():
+			if len(residues) == k:
+				return {FormulaType.COMPOSITE_EXPLICIT if any_seq_ref_by_k[k] else FormulaType.EXPLICIT_CLOSED}
+		return set()
 
 	def _types_from_name(self, seq_id: str) -> Set[FormulaType]:
 		"""Infer formula types from the OEIS sequence name/title."""
@@ -232,6 +280,9 @@ class FormulaComparator:
 				oeis_types.update(f.types)
 			# Merge name-derived types
 			oeis_types.update(name_types)
+			# Detect complete piecewise-by-residue closed forms (e.g. A194770, A152668)
+			# that the per-line classifier misses.
+			oeis_types.update(self._piecewise_explicit_types(seq_id))
 
 			new_types = loda_formula.types - oeis_types
 			reason = self._determine_interest(seq_id, loda_formula.types, oeis_types, name_types)
