@@ -42,8 +42,11 @@ def test_prepare_data_runs_needed_steps(tmp_path):
     assert (data_dir / "stripped").exists()
     assert (data_dir / "formulas-loda.txt").exists()
     assert (data_dir / "formulas-oeis.txt").exists()
+    assert (data_dir / "programs-oeis.txt").exists()
+    assert (data_dir / "keywords-oeis.txt").exists()
     assert any(cmd == ["loda", "update"] for cmd, _ in commands)
-    assert any(cmd == ["loda", "export-formulas"] for cmd, _ in commands)
+    # export-formulas is invoked via the exporter callable, not through runner
+    assert (data_dir / "formulas-loda.txt").read_text() == "loda formulas\n"
     assert OEIS_FORMULAS_URL in str(report.skipped) or report.created
 
 
@@ -53,11 +56,13 @@ def test_prepare_data_skips_when_present(tmp_path):
     seq_dir = loda_home / "seqs" / "oeis"
     seq_dir.mkdir(parents=True)
 
+    data_dir.mkdir(parents=True, exist_ok=True)
     for name in ["names", "offsets", "stripped"]:
-        (data_dir / name).parent.mkdir(parents=True, exist_ok=True)
         (data_dir / name).write_text("existing\n", encoding="utf-8")
     (data_dir / "formulas-loda.txt").write_text("existing\n", encoding="utf-8")
     (data_dir / "formulas-oeis.txt").write_text("existing\n", encoding="utf-8")
+    (data_dir / "programs-oeis.txt").write_text("existing\n", encoding="utf-8")
+    (data_dir / "keywords-oeis.txt").write_text("existing\n", encoding="utf-8")
 
     commands = []
 
