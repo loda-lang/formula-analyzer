@@ -151,6 +151,7 @@ class FormulaComparator:
 	# Patterns that indicate a LODA lookup-table encoding artifact rather than a
 	# true mathematical formula.
 	_LOOKUP_TABLE_PATTERNS = re.compile(r'bitxor|%10\b.*\b10\^|\b10\^.*%10\b')
+	_ENUM_INDICATOR = re.compile(r'\(n==\d+\)')
 
 	def __init__(self, oeis_formulas: Dict[str, List[ClassifiedFormula]],
 				 loda_formulas: Dict[str, ClassifiedFormula],
@@ -194,7 +195,11 @@ class FormulaComparator:
 		self.RHS_RECURRENCE_PATTERN = re.compile(r'\ba\(\s*n\s*([+\-]\s*\d+\s*)?\)', re.IGNORECASE)
 
 	def _is_lookup_table_formula(self, text: str) -> bool:
-		return bool(self._LOOKUP_TABLE_PATTERNS.search(text))
+		if self._LOOKUP_TABLE_PATTERNS.search(text):
+			return True
+		if len(self._ENUM_INDICATOR.findall(text)) >= 3:
+			return True
+		return False
 
 	def _piecewise_explicit_types(self, seq_id: str) -> Set[FormulaType]:
 		"""Detect a complete piecewise-by-residue closed form on the OEIS side.
@@ -524,9 +529,13 @@ def analyze_formulas(oeis_file: str, loda_file: str, names_file: str,
 		kw_map = parser.parse_keywords_file(keywords_file)
 		dead_seqs = kw_map.get('dead', set())
 		cons_seqs = kw_map.get('cons', set())
-		skip_seqs = cons_seqs
+		cofr_seqs = kw_map.get('cofr', set())
+		tabf_seqs = kw_map.get('tabf', set())
+		skip_seqs = cons_seqs | cofr_seqs | tabf_seqs
 		print(f"  Found {len(dead_seqs)} dead sequences (will be skipped)")
-		print(f"  Found {len(cons_seqs)} decimal expansion sequences (will be skipped)")
+		print(f"  Skipping {len(cons_seqs)} decimal expansions, "
+			  f"{len(cofr_seqs)} continued fractions, "
+			  f"{len(tabf_seqs)} irregular triangles")
 
 	print("\nComparing formulas...")
 	comparator = FormulaComparator(oeis_formulas, loda_formulas, names, oeis_programs,
