@@ -48,6 +48,7 @@ def main():
     loda_file = str(paths.formulas_loda)
     names_file = str(paths.names)
     programs_file = str(paths.programs_oeis)
+    keywords_file = str(paths.keywords_oeis)
     results_dir = base_dir / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
     output_file = str(results_dir / "interesting_formulas.txt")
@@ -75,7 +76,8 @@ def main():
     
     # Run analysis
     results, comparator = analyze_formulas(oeis_file, loda_file, names_file, output_file,
-                                           programs_file=programs_file)
+                                           programs_file=programs_file,
+                                           keywords_file=keywords_file)
     
     # Generate statistics
     print("\n" + "=" * 80)
