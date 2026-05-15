@@ -133,31 +133,39 @@ class FileParser:
 		"""
 		return ProgramExtractor().parse_oeis_programs_file(filepath)
 
-	def parse_keywords_file(self, filepath: str) -> Set[str]:
-		"""Return the set of sequence IDs tagged 'dead' in the OEIS keywords file."""
-		ids: Set[str] = set()
+	def parse_keywords_file(self, filepath: str) -> Dict[str, Set[str]]:
+		"""Parse keywords file, returning a mapping of keyword -> set of sequence IDs."""
+		kw_map: Dict[str, Set[str]] = defaultdict(set)
 		with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
 			for line in f:
 				m = re.match(r'(A\d{6}):\s*(.+)', line)
-				if m and 'dead' in m.group(2).split(','):
-					ids.add(m.group(1))
-		return ids
+				if m:
+					for kw in m.group(2).split(','):
+						kw_map[kw.strip()].add(m.group(1))
+		return dict(kw_map)
 
 
 class FormulaComparator:
 	"""Compares LODA formulas against OEIS formulas to find interesting ones."""
 
+	# Patterns that indicate a LODA lookup-table encoding artifact rather than a
+	# true mathematical formula.
+	_LOOKUP_TABLE_PATTERNS = re.compile(r'bitxor|%10\b.*\b10\^|\b10\^.*%10\b')
+
 	def __init__(self, oeis_formulas: Dict[str, List[ClassifiedFormula]],
 				 loda_formulas: Dict[str, ClassifiedFormula],
 				 names: Dict[str, str],
 				 oeis_programs: Optional[Dict[str, List[ClassifiedFormula]]] = None,
-				 dead_seqs: Optional[Set[str]] = None):
+				 dead_seqs: Optional[Set[str]] = None,
+				 skip_seqs: Optional[Set[str]] = None):
 		self.oeis_formulas = oeis_formulas
 		self.loda_formulas = loda_formulas
 		self.names = names
 		self.oeis_programs = oeis_programs or {}
 		# seq IDs tagged "dead" in OEIS — skip entirely
 		self.dead_seqs: Set[str] = dead_seqs or set()
+		# seq IDs to skip for other reasons (e.g. decimal expansions tagged "cons")
+		self.skip_seqs: Set[str] = skip_seqs or set()
 		# Precompiled patterns for name inference
 		self.NAME_EXPLICIT_PATTERN = re.compile(r'\ba\(n\)\s*=')
 		self.NAME_RECURRENCE_PATTERN = re.compile(r'\ba\(n[-+]\d+\)')
@@ -184,6 +192,9 @@ class FormulaComparator:
 		)
 		# Detect a(n), a(n-k) or a(n+k) on the RHS — disqualifies a "closed form" line as recursive.
 		self.RHS_RECURRENCE_PATTERN = re.compile(r'\ba\(\s*n\s*([+\-]\s*\d+\s*)?\)', re.IGNORECASE)
+
+	def _is_lookup_table_formula(self, text: str) -> bool:
+		return bool(self._LOOKUP_TABLE_PATTERNS.search(text))
 
 	def _piecewise_explicit_types(self, seq_id: str) -> Set[FormulaType]:
 		"""Detect a complete piecewise-by-residue closed form on the OEIS side.
@@ -264,7 +275,9 @@ class FormulaComparator:
 		"""Find LODA formulas that provide new formula types."""
 		results: List[Tuple[ClassifiedFormula, Set[FormulaType], str]] = []
 		for seq_id, loda_formula in self.loda_formulas.items():
-			if seq_id in self.dead_seqs:
+			if seq_id in self.dead_seqs or seq_id in self.skip_seqs:
+				continue
+			if self._is_lookup_table_formula(loda_formula.text):
 				continue
 
 			oeis_formulas = self.oeis_formulas.get(seq_id, [])
@@ -505,13 +518,19 @@ def analyze_formulas(oeis_file: str, loda_file: str, names_file: str,
 		print(f"  Found program-derived formulas for {len(oeis_programs)} sequences")
 
 	dead_seqs: Set[str] = set()
+	skip_seqs: Set[str] = set()
 	if keywords_file and os.path.exists(keywords_file):
 		print("Parsing OEIS keywords...")
-		dead_seqs = parser.parse_keywords_file(keywords_file)
+		kw_map = parser.parse_keywords_file(keywords_file)
+		dead_seqs = kw_map.get('dead', set())
+		cons_seqs = kw_map.get('cons', set())
+		skip_seqs = cons_seqs
 		print(f"  Found {len(dead_seqs)} dead sequences (will be skipped)")
+		print(f"  Found {len(cons_seqs)} decimal expansion sequences (will be skipped)")
 
 	print("\nComparing formulas...")
-	comparator = FormulaComparator(oeis_formulas, loda_formulas, names, oeis_programs, dead_seqs)
+	comparator = FormulaComparator(oeis_formulas, loda_formulas, names, oeis_programs,
+								   dead_seqs=dead_seqs, skip_seqs=skip_seqs)
 	results = comparator.find_new_formulas()
     
 	# Sort by interest (prioritize explicit formulas)
