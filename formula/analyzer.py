@@ -134,12 +134,12 @@ class FileParser:
 		return ProgramExtractor().parse_oeis_programs_file(filepath)
 
 	def parse_keywords_file(self, filepath: str) -> Set[str]:
-		"""Return the set of sequence IDs that carry the OEIS 'formula' keyword."""
+		"""Return the set of sequence IDs tagged 'dead' in the OEIS keywords file."""
 		ids: Set[str] = set()
 		with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
 			for line in f:
 				m = re.match(r'(A\d{6}):\s*(.+)', line)
-				if m and 'formula' in m.group(2).split(','):
+				if m and 'dead' in m.group(2).split(','):
 					ids.add(m.group(1))
 		return ids
 
@@ -151,13 +151,13 @@ class FormulaComparator:
 				 loda_formulas: Dict[str, ClassifiedFormula],
 				 names: Dict[str, str],
 				 oeis_programs: Optional[Dict[str, List[ClassifiedFormula]]] = None,
-				 oeis_formula_kw: Optional[Set[str]] = None):
+				 dead_seqs: Optional[Set[str]] = None):
 		self.oeis_formulas = oeis_formulas
 		self.loda_formulas = loda_formulas
 		self.names = names
 		self.oeis_programs = oeis_programs or {}
-		# seq IDs that carry the OEIS "formula" keyword even if not in formulas-oeis.txt
-		self.oeis_formula_kw: Set[str] = oeis_formula_kw or set()
+		# seq IDs tagged "dead" in OEIS — skip entirely
+		self.dead_seqs: Set[str] = dead_seqs or set()
 		# Precompiled patterns for name inference
 		self.NAME_EXPLICIT_PATTERN = re.compile(r'\ba\(n\)\s*=')
 		self.NAME_RECURRENCE_PATTERN = re.compile(r'\ba\(n[-+]\d+\)')
@@ -264,6 +264,9 @@ class FormulaComparator:
 		"""Find LODA formulas that provide new formula types."""
 		results: List[Tuple[ClassifiedFormula, Set[FormulaType], str]] = []
 		for seq_id, loda_formula in self.loda_formulas.items():
+			if seq_id in self.dead_seqs:
+				continue
+
 			oeis_formulas = self.oeis_formulas.get(seq_id, [])
 			name_types = self._types_from_name(seq_id)
 
@@ -280,10 +283,6 @@ class FormulaComparator:
 					if loda_formula.types <= combined_types:
 						continue
 					results.append((loda_formula, new_types, "LODA extends name/program-derived types"))
-				elif seq_id in self.oeis_formula_kw:
-					# OEIS has a formula (keyword present) but it's not in the text export —
-					# skip rather than produce a false positive.
-					continue
 				else:
 					results.append((loda_formula, loda_formula.types, "No formulas in OEIS for this sequence"))
 				continue
@@ -505,14 +504,14 @@ def analyze_formulas(oeis_file: str, loda_file: str, names_file: str,
 		oeis_programs = parser.parse_oeis_programs_file(programs_file)
 		print(f"  Found program-derived formulas for {len(oeis_programs)} sequences")
 
-	oeis_formula_kw: Set[str] = set()
+	dead_seqs: Set[str] = set()
 	if keywords_file and os.path.exists(keywords_file):
 		print("Parsing OEIS keywords...")
-		oeis_formula_kw = parser.parse_keywords_file(keywords_file)
-		print(f"  Found {len(oeis_formula_kw)} sequences with 'formula' keyword")
+		dead_seqs = parser.parse_keywords_file(keywords_file)
+		print(f"  Found {len(dead_seqs)} dead sequences (will be skipped)")
 
 	print("\nComparing formulas...")
-	comparator = FormulaComparator(oeis_formulas, loda_formulas, names, oeis_programs, oeis_formula_kw)
+	comparator = FormulaComparator(oeis_formulas, loda_formulas, names, oeis_programs, dead_seqs)
 	results = comparator.find_new_formulas()
     
 	# Sort by interest (prioritize explicit formulas)
