@@ -133,6 +133,16 @@ class FileParser:
 		"""
 		return ProgramExtractor().parse_oeis_programs_file(filepath)
 
+	def parse_keywords_file(self, filepath: str) -> Set[str]:
+		"""Return the set of sequence IDs that carry the OEIS 'formula' keyword."""
+		ids: Set[str] = set()
+		with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+			for line in f:
+				m = re.match(r'(A\d{6}):\s*(.+)', line)
+				if m and 'formula' in m.group(2).split(','):
+					ids.add(m.group(1))
+		return ids
+
 
 class FormulaComparator:
 	"""Compares LODA formulas against OEIS formulas to find interesting ones."""
@@ -140,11 +150,14 @@ class FormulaComparator:
 	def __init__(self, oeis_formulas: Dict[str, List[ClassifiedFormula]],
 				 loda_formulas: Dict[str, ClassifiedFormula],
 				 names: Dict[str, str],
-				 oeis_programs: Optional[Dict[str, List[ClassifiedFormula]]] = None):
+				 oeis_programs: Optional[Dict[str, List[ClassifiedFormula]]] = None,
+				 oeis_formula_kw: Optional[Set[str]] = None):
 		self.oeis_formulas = oeis_formulas
 		self.loda_formulas = loda_formulas
 		self.names = names
 		self.oeis_programs = oeis_programs or {}
+		# seq IDs that carry the OEIS "formula" keyword even if not in formulas-oeis.txt
+		self.oeis_formula_kw: Set[str] = oeis_formula_kw or set()
 		# Precompiled patterns for name inference
 		self.NAME_EXPLICIT_PATTERN = re.compile(r'\ba\(n\)\s*=')
 		self.NAME_RECURRENCE_PATTERN = re.compile(r'\ba\(n[-+]\d+\)')
@@ -267,6 +280,10 @@ class FormulaComparator:
 					if loda_formula.types <= combined_types:
 						continue
 					results.append((loda_formula, new_types, "LODA extends name/program-derived types"))
+				elif seq_id in self.oeis_formula_kw:
+					# OEIS has a formula (keyword present) but it's not in the text export —
+					# skip rather than produce a false positive.
+					continue
 				else:
 					results.append((loda_formula, loda_formula.types, "No formulas in OEIS for this sequence"))
 				continue
@@ -454,28 +471,30 @@ class FormulaComparator:
 		return "\n".join(lines)
 
 
-def analyze_formulas(oeis_file: str, loda_file: str, names_file: str, 
+def analyze_formulas(oeis_file: str, loda_file: str, names_file: str,
 					 output_file: Optional[str] = None,
-					 programs_file: Optional[str] = None):
+					 programs_file: Optional[str] = None,
+					 keywords_file: Optional[str] = None):
 	"""
 	Main analysis function.
-    
+
 	Args:
 		oeis_file: Path to formulas-oeis.txt
 		loda_file: Path to formulas-loda.txt
 		names_file: Path to names
 		output_file: Optional output file for report
 		programs_file: Optional path to programs-oeis.txt
+		keywords_file: Optional path to keywords-oeis.txt
 	"""
 	print("Parsing OEIS formulas...")
 	parser = FileParser()
 	oeis_formulas = parser.parse_oeis_file(oeis_file)
 	print(f"  Found formulas for {len(oeis_formulas)} sequences")
-    
+
 	print("Parsing LODA formulas...")
 	loda_formulas = parser.parse_loda_file(loda_file)
 	print(f"  Found formulas for {len(loda_formulas)} sequences")
-    
+
 	print("Parsing sequence names...")
 	names = parser.parse_names_file(names_file)
 	print(f"  Found {len(names)} sequence names")
@@ -485,9 +504,15 @@ def analyze_formulas(oeis_file: str, loda_file: str, names_file: str,
 		print("Parsing OEIS programs...")
 		oeis_programs = parser.parse_oeis_programs_file(programs_file)
 		print(f"  Found program-derived formulas for {len(oeis_programs)} sequences")
-    
+
+	oeis_formula_kw: Set[str] = set()
+	if keywords_file and os.path.exists(keywords_file):
+		print("Parsing OEIS keywords...")
+		oeis_formula_kw = parser.parse_keywords_file(keywords_file)
+		print(f"  Found {len(oeis_formula_kw)} sequences with 'formula' keyword")
+
 	print("\nComparing formulas...")
-	comparator = FormulaComparator(oeis_formulas, loda_formulas, names, oeis_programs)
+	comparator = FormulaComparator(oeis_formulas, loda_formulas, names, oeis_programs, oeis_formula_kw)
 	results = comparator.find_new_formulas()
     
 	# Sort by interest (prioritize explicit formulas)
@@ -528,7 +553,8 @@ if __name__ == "__main__":
 	loda_file = "formulas-loda.txt"
 	names_file = "names"
 	output_file = "interesting_formulas.txt"
-    
+	keywords_file = "keywords-oeis.txt"
+
 	# Allow command line arguments
 	if len(sys.argv) > 1:
 		oeis_file = sys.argv[1]
@@ -538,5 +564,8 @@ if __name__ == "__main__":
 		names_file = sys.argv[3]
 	if len(sys.argv) > 4:
 		output_file = sys.argv[4]
-    
-	results, comparator = analyze_formulas(oeis_file, loda_file, names_file, output_file)
+	if len(sys.argv) > 5:
+		keywords_file = sys.argv[5]
+
+	results, comparator = analyze_formulas(oeis_file, loda_file, names_file, output_file,
+										   keywords_file=keywords_file)
